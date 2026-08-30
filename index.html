@@ -1,0 +1,406 @@
+<div id="root">
+  <style>
+    #root {
+      --ink: #16202b;
+      --ink-soft: #33414f;
+      --paper: #faf9f4;
+      --paper-line: #e2ded1;
+      --teal: #0d7d7d;
+      --p1: #e8721c;
+      --p2: #3aa14b;
+      --p3: #2b7fd4;
+      --p4: #d92b2b;
+      --p5: #8b45c4;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      font-family: var(--sans);
+      color: var(--ink);
+      max-width: 560px;
+      margin: 0 auto;
+      -webkit-text-size-adjust: 100%;
+    }
+    #root * { box-sizing: border-box; }
+
+    .head {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 4px 2px 14px;
+    }
+    .head h1 {
+      font-size: 15px; letter-spacing: .14em; text-transform: uppercase;
+      margin: 0; font-weight: 800;
+    }
+    .head p { margin: 0; font-size: 12px; color: var(--ink-soft); }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--paper-line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .capture {
+      display: block; width: 100%;
+      background: var(--teal); color: #fff;
+      border: 0; border-radius: 14px;
+      padding: 20px 16px;
+      font-family: var(--sans);
+      font-size: 17px; font-weight: 700; letter-spacing: .01em;
+      cursor: pointer;
+    }
+    .capture:active { transform: scale(.99); }
+    .capture .sub {
+      display: block; margin-top: 4px;
+      font-size: 12px; font-weight: 500; opacity: .85; letter-spacing: 0;
+    }
+    .capture[disabled] { opacity: .6; }
+    input[type=file] { display: none; }
+
+    .status {
+      font-size: 13px; color: var(--ink-soft);
+      padding: 12px 2px; text-align: center;
+    }
+    .status.err { color: var(--p4); text-align: left; }
+
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px dashed var(--paper-line);
+    }
+    .row:last-child { border-bottom: 0; }
+
+    .pill {
+      flex: 0 0 24px; height: 24px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 13px; font-weight: 700;
+      border: 2px solid currentColor;
+    }
+    .p1 { color: var(--p1); } .p2 { color: var(--p2); } .p3 { color: var(--p3); }
+    .p4 { color: var(--p4); } .p5 { color: var(--p5); }
+
+    .field { flex: 1 1 auto; min-width: 0; }
+    .field label {
+      display: block; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px;
+    }
+    .field input {
+      width: 100%; border: 0; background: transparent; padding: 0;
+      font-family: var(--mono); font-size: 17px; font-weight: 600;
+      color: var(--ink);
+    }
+    .field input:focus { outline: 0; background: #fff5cc; border-radius: 4px; }
+    .field input::placeholder { color: #b9b3a4; font-weight: 400; }
+
+    .copy {
+      flex: 0 0 auto;
+      border: 1px solid var(--paper-line); background: #fff;
+      border-radius: 9px; padding: 9px 12px;
+      font-family: var(--sans); font-size: 12px; font-weight: 700;
+      color: var(--teal); cursor: pointer; min-width: 74px;
+    }
+    .copy.done { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .fillbtn {
+      width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 10px;
+      background: var(--teal); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+    }
+    .fillbtn.done { background: #2b8a3e; }
+    .fillbtn:disabled { opacity: .5; }
+    .fillhint { margin: 8px 2px 0; font-size: 13px; color: #666; line-height: 1.4; }
+
+    .section-title {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--ink-soft); margin: 0 0 8px;
+    }
+    .link {
+      background: none; border: 0; padding: 0;
+      font-family: var(--sans); font-size: 12px; font-weight: 600;
+      color: var(--teal); cursor: pointer; text-decoration: underline;
+    }
+    .foot { display: flex; gap: 10px; justify-content: space-between; padding: 2px 2px 20px; }
+    .hint { font-size: 12px; color: var(--ink-soft); margin: 0 2px 12px; line-height: 1.45; }
+    @media (prefers-reduced-motion: no-preference) {
+      .copy, .capture { transition: background .15s, color .15s; }
+    }
+  </style>
+
+  <div class="head">
+    <h1>Ticket → Facture</h1>
+    <p>Super U</p>
+  </div>
+
+  <button class="capture" id="btn">
+    Photographier le ticket
+    <span class="sub">Le bas du ticket suffit (code-barres + ligne Date/Heure)</span>
+  </button>
+  <input type="file" id="file" accept="image/*" capture="environment">
+
+  <div class="status" id="status"></div>
+
+  <div class="card" id="ticketCard" style="display:none">
+    <div class="section-title"><span>Références du ticket</span><button class="link" id="again">Autre ticket</button></div>
+    <div id="rows"></div>
+    <button class="fillbtn" id="fillAll">Copier pour le formulaire</button>
+    <p class="fillhint">Puis, sur la page Super U, touche le favori <b>Remplir facture U</b>.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><span>Mes coordonnées</span><span id="saved" style="text-transform:none;letter-spacing:0"></span></div>
+    <div id="me"></div>
+  </div>
+
+  <p class="hint">Les coordonnées sont enregistrées : à saisir une seule fois. Vérifiez toujours les chiffres lus sur la photo avant de valider le formulaire.</p>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  var RELAIS_URL = (window.FACTURE_U_CONFIG || {}).relaisUrl || '';
+  var TICKET = [
+    { k: 'magasin', n: 1, label: 'Code du magasin' },
+    { k: 'ticket',  n: 2, label: 'Numéro du ticket' },
+    { k: 'date',    n: 3, label: "Date d'émission" },
+    { k: 'montant', n: 4, label: 'Montant TTC' },
+    { k: 'caisse',  n: 5, label: 'Code caisse' }
+  ];
+  var ME = [
+    { k: 'nom', label: 'Nom' },
+    { k: 'prenom', label: 'Prénom' },
+    { k: 'voie', label: 'Numéro et libellé de voie' },
+    { k: 'complement', label: 'Complément d\'adresse' },
+    { k: 'cp', label: 'Code postal' },
+    { k: 'ville', label: 'Ville' },
+    { k: 'email', label: 'Email' },
+    { k: 'tel', label: 'Téléphone' }
+  ];
+
+  /* Dans un artifact Claude c'est window.storage ; sur un site normal, localStorage. */
+  var store = {
+    get: function (k) {
+      if (window.storage && window.storage.get) return window.storage.get(k);
+      try { return Promise.resolve({ value: localStorage.getItem(k) }); }
+      catch (e) { return Promise.resolve(null); }
+    },
+    set: function (k, v) {
+      if (window.storage && window.storage.set) return window.storage.set(k, v);
+      try { localStorage.setItem(k, v); return Promise.resolve(); }
+      catch (e) { return Promise.reject(e); }
+    }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var status = $('status');
+  var profil = {};
+
+  function copyText(text, btn) {
+    var done = function () {
+      btn.textContent = 'Copié';
+      btn.classList.add('done');
+      setTimeout(function () { btn.textContent = 'Copier'; btn.classList.remove('done'); }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+    } else { fallback(text, done); }
+  }
+  function fallback(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); done();
+  }
+
+  function makeRow(opts) {
+    var row = document.createElement('div');
+    row.className = 'row';
+    if (opts.n) {
+      var pill = document.createElement('span');
+      pill.className = 'pill p' + opts.n;
+      pill.textContent = opts.n;
+      row.appendChild(pill);
+    }
+    var field = document.createElement('div');
+    field.className = 'field';
+    var lab = document.createElement('label');
+    lab.textContent = opts.label;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = opts.value || '';
+    input.placeholder = opts.placeholder || '—';
+    input.setAttribute('aria-label', opts.label);
+    if (opts.onInput) input.addEventListener('input', function () { opts.onInput(input.value); });
+    field.appendChild(lab); field.appendChild(input);
+    var btn = document.createElement('button');
+    btn.className = 'copy'; btn.textContent = 'Copier';
+    btn.addEventListener('click', function () { copyText(input.value, btn); });
+    row.appendChild(field); row.appendChild(btn);
+    return row;
+  }
+
+  // --- Coordonnées enregistrées ---
+  function renderMe() {
+    var box = $('me');
+    box.innerHTML = '';
+    ME.forEach(function (f) {
+      box.appendChild(makeRow({
+        label: f.label,
+        value: profil[f.k] || '',
+        placeholder: 'À remplir',
+        onInput: function (v) { profil[f.k] = v; saveProfil(); }
+      }));
+    });
+  }
+  var saveTimer = null;
+  function saveProfil() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        store.set('factureu:profil', JSON.stringify(profil)).then(function () {
+          $('saved').textContent = 'Enregistré';
+          setTimeout(function () { $('saved').textContent = ''; }, 1500);
+        }, function () {});
+      } catch (e) {}
+    }, 500);
+  }
+  (async function () {
+    try {
+      var r = await store.get('factureu:profil');
+      if (r && r.value) profil = JSON.parse(r.value);
+    } catch (e) { profil = {}; }
+    renderMe();
+  })();
+
+  // --- Lecture du ticket ---
+  function shrink(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var max = 1568;
+          var s = Math.min(1, max / Math.max(img.width, img.height));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.width * s);
+          c.height = Math.round(img.height * s);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        };
+        img.onerror = function () { reject(new Error('image')); };
+        img.src = reader.result;
+      };
+      reader.onerror = function () { reject(new Error('lecture')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* Le prompt de lecture est côté relais (il ne sert plus ici). */
+  var PROMPT_INUTILISE = [
+    "Tu lis un ticket de caisse Super U / Hyper U / U Express.",
+    "Extrais exactement ces 5 informations, telles qu'imprimées :",
+    "- magasin : le code magasin (5 chiffres, imprimé après \"Magasin\" en haut, et repris dans la ligne du bas)",
+    "- ticket : le numéro du ticket (colonne \"Tick\" de la ligne du bas)",
+    "- date : la date d'émission au format JJ/MM/AAAA (année sur 4 chiffres, complète 20xx si le ticket n'affiche que 2 chiffres)",
+    "- montant : le montant TOTAL TTC, avec une virgule comme séparateur décimal, sans symbole euro",
+    "- caisse : le code caisse (colonne \"Ou\" / numéro de caisse de la ligne du bas)",
+    "Réponds UNIQUEMENT par un objet JSON, sans texte autour et sans balises markdown :",
+    '{"magasin":"","ticket":"","date":"","montant":"","caisse":""}',
+    "Si une valeur est illisible, mets une chaîne vide."
+  ].join('\n');
+
+  async function read(file) {
+    $('btn').disabled = true;
+    status.className = 'status';
+    status.textContent = 'Lecture du ticket…';
+    try {
+      var b64 = await shrink(file);
+      if (!RELAIS_URL) throw new Error('RELAIS_ABSENT');
+      var res = await fetch(RELAIS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64 })
+      });
+      if (!res.ok) {
+        var detail = '';
+        try { detail = (await res.json()).error.message; } catch (e2) {}
+        throw new Error('HTTP ' + res.status + (detail ? ' — ' + detail : ''));
+      }
+      var out = await res.json();
+      show(out);
+      status.textContent = '';
+    } catch (e) {
+      status.className = 'status err';
+      var m = String(e && e.message || '');
+      status.textContent =
+        m === 'RELAIS_ABSENT'
+          ? "Lecture automatique pas encore activée (relais non configuré). Remplissez les cases à la main pour l'instant."
+          : /HTTP 429/.test(m)
+            ? "Trop de lectures d'affilée. Patientez une minute."
+            : /HTTP|Failed to fetch|NetworkError/.test(m)
+              ? "Connexion au service de lecture impossible (" + m + "). Les cases restent remplissables à la main."
+              : "Le ticket n'a pas pu être lu. Reprenez la photo bien à plat, avec le bas du ticket entier et sans reflet — ou remplissez les cases à la main.";
+      show({});
+    }
+    $('btn').disabled = false;
+  }
+
+  var ticketVals = {};
+  function show(vals) {
+    var rows = $('rows');
+    rows.innerHTML = '';
+    ticketVals = {};
+    TICKET.forEach(function (f) {
+      ticketVals[f.k] = vals[f.k] || '';
+      rows.appendChild(makeRow({
+        n: f.n, label: f.label, value: vals[f.k] || '', placeholder: 'À compléter',
+        onInput: function (v) { ticketVals[f.k] = v; }
+      }));
+    });
+    $('ticketCard').style.display = '';
+  }
+
+  // Le bookmarklet lit ce JSON dans le presse-papier pour remplir le formulaire Super U.
+  function buildPayload() {
+    return JSON.stringify({
+      v: 1,
+      magasin: ticketVals.magasin || '',
+      ticket: ticketVals.ticket || '',
+      date: ticketVals.date || '',
+      montant: ticketVals.montant || '',
+      caisse: ticketVals.caisse || '',
+      nom: profil.nom || '',
+      prenom: profil.prenom || '',
+      voie: profil.voie || '',
+      complement: profil.complement || '',
+      cp: profil.cp || '',
+      ville: profil.ville || '',
+      tel: profil.tel || '',
+      email: profil.email || ''
+    });
+  }
+
+  $('fillAll').addEventListener('click', function () {
+    var manquants = TICKET.filter(function (f) { return !(ticketVals[f.k] || '').trim(); })
+      .map(function (f) { return f.label; });
+    var btn = $('fillAll');
+    var ok = function () {
+      btn.textContent = manquants.length
+        ? 'Copié — incomplet : ' + manquants.join(', ')
+        : 'Copié — va sur le formulaire';
+      btn.classList.add('done');
+      setTimeout(function () { btn.textContent = 'Copier pour le formulaire'; btn.classList.remove('done'); }, 2600);
+    };
+    var text = buildPayload();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, function () { fallback(text, ok); });
+    } else { fallback(text, ok); }
+  });
+
+  $('btn').addEventListener('click', function () { $('file').click(); });
+  $('file').addEventListener('change', function (e) {
+    if (e.target.files && e.target.files[0]) read(e.target.files[0]);
+    e.target.value = '';
+  });
+  $('again').addEventListener('click', function () { $('file').click(); });
+})();
+</script>

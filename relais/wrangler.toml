@@ -1,0 +1,11 @@
+name = "facture-u-relais"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# L'origine autorisée à appeler le relais (le site GitHub Pages).
+# Elle est renseignée automatiquement par installer-relais.sh.
+[vars]
+ORIGINES_AUTORISEES = "https://epsi08.github.io"
+
+# La clé API n'est PAS ici : elle est stockée chiffrée chez Cloudflare via
+#   npx wrangler secret put ANTHROPIC_API_KEY

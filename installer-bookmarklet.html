@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installer « Remplir facture U »</title>
+<style>
+  :root { --teal:#0b7285; --ink:#1a1a1a; --muted:#666; --line:#e4e4e7; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 18px 60px; background:#f6f7f8; color:var(--ink);
+         font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif; }
+  .wrap { max-width:640px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 6px; letter-spacing:-.02em; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:18px; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  ol { margin:0; padding-left:22px; }
+  li { margin-bottom:10px; }
+  code { background:#f0f1f3; padding:2px 6px; border-radius:5px; font-size:14px; }
+  .copybtn { width:100%; padding:15px; border:0; border-radius:10px; background:var(--teal);
+             color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+  .copybtn.done { background:#2b8a3e; }
+  textarea { width:100%; height:110px; margin-top:12px; font-family:ui-monospace,Menlo,monospace;
+             font-size:11px; border:1px solid var(--line); border-radius:8px; padding:10px;
+             background:#fafafa; color:#444; }
+  .note { background:#fff8e6; border:1px solid #ffe08a; border-radius:10px; padding:14px 16px;
+          font-size:14.5px; margin-bottom:18px; }
+  b.name { white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Installer « Remplir facture U »</h1>
+  <p class="sub">Un favori qui remplit le formulaire Super U d'un seul geste.</p>
+
+  <div class="card">
+    <h2>1. Copier le code</h2>
+    <button class="copybtn" id="copy">Copier le code du favori</button>
+    <textarea id="code" readonly></textarea>
+  </div>
+
+  <div class="card">
+    <h2>2. Créer le favori sur iPhone</h2>
+    <ol>
+      <li>Dans Safari, ouvre <b>n'importe quelle page</b>, touche <b>Partager</b> puis <b>Ajouter aux favoris</b>. Enregistre.</li>
+      <li>Touche l'icône <b>Signets</b> (le livre) → <b>Favoris</b> → <b>Modifier</b>.</li>
+      <li>Touche le favori que tu viens de créer.</li>
+      <li>Renomme-le <b class="name">Remplir facture U</b>.</li>
+      <li>Efface l'adresse et <b>colle le code copié à l'étape 1</b>. Valide.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>3. S'en servir</h2>
+    <ol>
+      <li>Dans l'app, photographie le ticket puis touche <b>Copier pour le formulaire</b>.</li>
+      <li>Ouvre <code>magasins-u.com/ma-facture-u</code> dans Safari.</li>
+      <li>Touche la barre d'adresse, tape <b>Remplir</b> et choisis le favori.</li>
+      <li>Si Safari demande l'autorisation de coller, accepte.</li>
+      <li>Vérifie les valeurs, puis valide le formulaire toi-même.</li>
+    </ol>
+  </div>
+
+  <div class="note">
+    <b>Le bookmarklet ne valide jamais le formulaire.</b> Il remplit seulement les cases :
+    tu gardes le dernier mot avant l'envoi. Vérifie surtout le montant et la date,
+    qui viennent d'une lecture de photo.
+  </div>
+</div>
+<script>
+var BM = "javascript:(async function () { 'use strict'; var TOAST_MS = 4000; function toast(msg, ok) { var d = document.createElement('div'); d.textContent = msg; d.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;' + 'background:' + (ok ? '#0b7285' : '#c92a2a') + ';color:#fff;padding:12px 18px;border-radius:10px;' + 'font:15px/1.4 -apple-system,system-ui,sans-serif;max-width:88vw;text-align:center;' + 'box-shadow:0 4px 18px rgba(0,0,0,.25)'; document.body.appendChild(d); setTimeout(function () { d.remove(); }, TOAST_MS); } function setField(el, value) { if (!el) return false; var proto = Object.getPrototypeOf(el); var desc = Object.getOwnPropertyDescriptor(proto, 'value'); if (desc && desc.set) desc.set.call(el, value); else el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; } var byName = function (n) { return document.querySelector('[name=\"' + n + '\"]'); }; var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); }; function toIso(d) { d = String(d || '').trim(); if (/^\\d{4}-\\d{2}-\\d{2}$/.test(d)) return d; var m = d.match(/^(\\d{1,2})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{2}|\\d{4})$/); if (!m) return ''; var y = m[3].length === 2 ? '20' + m[3] : m[3]; return y + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); } async function pickStore(code) { code = String(code || '').trim(); if (!code) return false; var combo = document.getElementById('facture-u-storeCode') || document.querySelector('input[role=\"combobox\"]'); if (!combo) return false; combo.focus(); setField(combo, code); await wait(1200); var listId = combo.getAttribute('aria-controls') || combo.getAttribute('aria-owns'); var menu = listId ? document.getElementById(listId) : null; if (!menu) { var menus = document.querySelectorAll('[id*=\"listbox\"]'); menu = menus[menus.length - 1]; } if (!menu) return false; var leaves = [].slice.call(menu.querySelectorAll('*')) .filter(function (e) { return e.children.length === 0 && e.textContent.trim(); }); var opt = leaves.filter(function (e) { return e.textContent.trim() === code; })[0] || leaves.filter(function (e) { return e.textContent.trim().indexOf(code) === 0; })[0]; if (!opt) return false; opt.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); opt.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); opt.click(); await wait(700); var hidden = document.querySelector('input[type=hidden][name=\"facture-u-storeCode\"]'); return !!(hidden && hidden.value); } async function getPayload() { var raw = ''; try { if (navigator.clipboard && navigator.clipboard.readText) { raw = await navigator.clipboard.readText(); } } catch (e) { } if (!raw || raw.indexOf('{') === -1) { raw = window.prompt('Colle ici les donn\u00e9es du ticket (bouton \u00ab Copier pour le formulaire \u00bb dans l\\'app) :') || ''; } var s = raw.indexOf('{'), e = raw.lastIndexOf('}'); if (s === -1 || e === -1) return null; try { return JSON.parse(raw.slice(s, e + 1)); } catch (err) { return null; } } if (!/magasins-u\\.com/.test(location.hostname)) { toast('Ouvre d\\'abord la page \u00ab Ma facture U \u00bb de magasins-u.com', false); return; } var data = await getPayload(); if (!data) { toast('Donn\u00e9es illisibles. Recopie-les depuis l\\'app.', false); return; } var particulier = document.getElementById('particulier'); if (particulier && !particulier.checked) { particulier.click(); await wait(900); } var address = String(data.voie || '').trim(); var complement = String(data.complement || '').trim(); var champComplement = byName('facture-u-addressComplement') || byName('facture-u-complement'); if (complement && !champComplement) address = (address + ' ' + complement).trim(); var filled = 0, missing = []; var put = function (name, value, label) { value = String(value == null ? '' : value).trim(); if (!value) return; if (setField(byName(name), value)) filled++; else missing.push(label || name); }; put('facture-u-ticketNumber', data.ticket, 'num\u00e9ro de ticket'); var iso = toIso(data.date); if (iso) put('facture-u-ticketDate', iso, 'date'); else if (data.date) missing.push('date (format non reconnu)'); put('facture-u-ticketAmount', data.montant, 'montant'); put('facture-u-checkoutCode', data.caisse, 'code caisse'); put('facture-u-lastname', data.nom, 'nom'); put('facture-u-firstname', data.prenom, 'pr\u00e9nom'); put('facture-u-address', address, 'adresse'); if (complement && champComplement) put(champComplement.name, complement, 'compl\u00e9ment'); put('facture-u-zipCode', data.cp, 'code postal'); put('facture-u-city', data.ville, 'ville'); put('facture-u-phoneNumber', data.tel, 't\u00e9l\u00e9phone'); put('facture-u-email', data.email, 'email'); var storeOk = await pickStore(data.magasin); if (storeOk) filled++; else if (data.magasin) missing.push('code magasin'); var msg = filled + ' champ' + (filled > 1 ? 's' : '') + ' rempli' + (filled > 1 ? 's' : ''); msg += missing.length ? ' \u2014 \u00e0 finir \u00e0 la main : ' + missing.join(', ') : '. V\u00e9rifie puis valide.'; toast(msg, missing.length === 0); })();";
+document.getElementById('code').value = BM;
+document.getElementById('copy').addEventListener('click', function () {
+  var b = this;
+  function ok() {
+    b.textContent = 'Copié — passe à l\u2019étape 2';
+    b.classList.add('done');
+    setTimeout(function () { b.textContent = 'Copier le code du favori'; b.classList.remove('done'); }, 2500);
+  }
+  function sel() {
+    var t = document.getElementById('code');
+    t.focus(); t.select();
+    try { document.execCommand('copy'); ok(); } catch (e) {}
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(BM).then(ok, sel);
+  } else { sel(); }
+});
+</script>
+</body>
+</html>
