@@ -1,74 +1,56 @@
-# Ticket → Facture Super U
+# Facture Super U
 
-Photographie un ticket de caisse Super U, l'app en extrait les 5 références, et un favori
-Safari remplit le formulaire `magasins-u.com/ma-facture-u` d'un seul geste.
+Super U n'édite plus de facture pour les achats professionnels : il faut remplir un formulaire
+en ligne à partir du ticket de caisse. Cette app supprime la partie pénible — le va-et-vient
+entre le ticket et le formulaire.
+
+**En ligne : https://epsi08.github.io/facture-u-f56ftgfk5j1y/**
 
 **Profil retenu : client particulier** (nom + prénom, sans SIRET ni TVA).
 
-## Architecture
+## Comment ça marche
 
-```
-Téléphone                    GitHub Pages              Cloudflare Worker        Anthropic
-[photo] ──────────────────▶ [index.html] ──────────▶ [relais] ─────────────▶ [lecture image]
-                             (public)                 (détient la clé)
-```
+1. Ouvrir l'app, recopier les **5 valeurs** du bas du ticket (les claviers numériques
+   s'ouvrent tout seuls).
+2. Toucher **Copier pour le formulaire**.
+3. Ouvrir `magasins-u.com/ma-facture-u` dans Safari.
+4. Toucher le favori **Remplir facture U** : les **12 champs** se remplissent d'un coup,
+   coordonnées personnelles comprises.
+5. Vérifier, puis valider soi-même.
 
-La clé API n'est **jamais** dans la page. Elle vit uniquement dans le relais, chiffrée chez
-Cloudflare. Une clé placée dans une page publique serait lisible — et facturable — par n'importe qui.
+Les coordonnées personnelles ne sont saisies qu'une fois : elles restent enregistrées dans le
+navigateur du téléphone. Seules les 5 références du ticket changent d'un achat à l'autre.
 
-## Mise en route
+## Installer
 
-### 1. Le site (déjà en ligne)
+**L'app** : ouvrir l'adresse ci-dessus dans **Safari** → Partager → *Sur l'écran d'accueil*.
 
-Publié automatiquement à chaque `git push`.
+**Le favori de pré-remplissage** : ouvrir `installer-bookmarklet.html` sur l'iPhone et suivre
+les 3 étapes. C'est lui qui fait l'essentiel du gain de temps.
 
-### 2. Le relais (une seule fois)
+## Ce que le favori fait — et ne fait pas
 
-Prérequis : une **clé API Anthropic** créée sur [console.anthropic.com](https://console.anthropic.com)
-→ *API keys* → *Create key*. ⚠️ C'est un compte **distinct de l'abonnement Claude Pro**, facturé
-à l'usage (quelques centimes par ticket lu). Un compte **Cloudflare** gratuit est aussi nécessaire.
+Il remplit les champs, gère le menu déroulant du code magasin et convertit la date au format
+attendu. **Il ne valide jamais le formulaire** : le dernier mot reste à toi.
 
-Puis, depuis ce dossier :
+## Choix assumés
 
-```bash
-bash installer-relais.sh
-```
+- **Pas de lecture automatique du ticket par photo.** Elle a été construite puis retirée : elle
+  imposait une clé API Anthropic, c'est-à-dire un compte facturé à l'usage, distinct de
+  l'abonnement Claude Pro. Le rapport coût/bénéfice ne le justifiait pas, le favori couvrant
+  déjà l'essentiel du travail répétitif.
+  Le code de la lecture auto et du relais Cloudflare reste dans l'historique Git
+  (commit `0b91a25`) si l'envie revient un jour.
+- **Aucun serveur, aucun compte, aucune donnée qui sort du téléphone.**
 
-Le script te connecte à Cloudflare, te demande ta clé, déploie le relais et branche le site dessus.
-**Ta clé n'est jamais écrite dans ce dossier ni dans le dépôt.**
+## Références techniques
 
-### 3. Le favori de pré-remplissage
-
-Ouvre `installer-bookmarklet.html` sur l'iPhone et suis les 3 étapes.
-
-## Usage quotidien
-
-1. Photographier le ticket dans l'app → les 5 champs se remplissent.
-2. Vérifier (surtout le montant et la date, lus sur une photo).
-3. Toucher **Copier pour le formulaire**.
-4. Ouvrir `magasins-u.com/ma-facture-u`, toucher le favori **Remplir facture U**.
-5. Contrôler, puis valider soi-même.
-
-Sans relais configuré, l'app reste utilisable : les 5 cases se remplissent à la main et le
-favori fonctionne quand même.
-
-## Sécurité du relais
-
-- La clé reste côté serveur, jamais exposée au navigateur.
-- Le prompt, le modèle et le plafond de jetons sont figés dans le relais : même si l'URL était
-  découverte, elle ne permettrait que de faire lire un ticket de caisse.
-- Appels limités à l'origine du site (CORS) et à 20 requêtes par IP toutes les 10 minutes.
-- Taille d'image plafonnée.
-
-L'adresse du dépôt est volontairement non devinable, comme pour l'app de cartes de fidélité.
+Les pièges du formulaire Super U (Cloudflare, react-select, format de date, id aléatoires) sont
+documentés dans `../REFERENCE-formulaire-super-u.md` — à lire avant toute modification du favori.
 
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | l'app (lecture du ticket + coordonnées) |
-| `config.js` | adresse du relais, généré par le script |
+| `index.html` | l'app : saisie des références + coordonnées enregistrées |
 | `installer-bookmarklet.html` | installation du favori de pré-remplissage |
-| `installer-relais.sh` | déploiement guidé du relais |
-| `relais/worker.js` | le relais (aucune clé dedans) |
-| `relais/wrangler.toml` | configuration Cloudflare |

@@ -40,28 +40,7 @@
       margin-bottom: 12px;
     }
 
-    .capture {
-      display: block; width: 100%;
-      background: var(--teal); color: #fff;
-      border: 0; border-radius: 14px;
-      padding: 20px 16px;
-      font-family: var(--sans);
-      font-size: 17px; font-weight: 700; letter-spacing: .01em;
-      cursor: pointer;
-    }
-    .capture:active { transform: scale(.99); }
-    .capture .sub {
-      display: block; margin-top: 4px;
-      font-size: 12px; font-weight: 500; opacity: .85; letter-spacing: 0;
-    }
-    .capture[disabled] { opacity: .6; }
     input[type=file] { display: none; }
-
-    .status {
-      font-size: 13px; color: var(--ink-soft);
-      padding: 12px 2px; text-align: center;
-    }
-    .status.err { color: var(--p4); text-align: left; }
 
     .row {
       display: flex; align-items: center; gap: 10px;
@@ -121,25 +100,18 @@
     .foot { display: flex; gap: 10px; justify-content: space-between; padding: 2px 2px 20px; }
     .hint { font-size: 12px; color: var(--ink-soft); margin: 0 2px 12px; line-height: 1.45; }
     @media (prefers-reduced-motion: no-preference) {
-      .copy, .capture { transition: background .15s, color .15s; }
+      .copy { transition: background .15s, color .15s; }
     }
   </style>
 
   <div class="head">
-    <h1>Ticket → Facture</h1>
+    <h1>Facture Super U</h1>
     <p>Super U</p>
   </div>
 
-  <button class="capture" id="btn">
-    Photographier le ticket
-    <span class="sub">Le bas du ticket suffit (code-barres + ligne Date/Heure)</span>
-  </button>
-  <input type="file" id="file" accept="image/*" capture="environment">
-
-  <div class="status" id="status"></div>
-
-  <div class="card" id="ticketCard" style="display:none">
-    <div class="section-title"><span>Références du ticket</span><button class="link" id="again">Autre ticket</button></div>
+  <div class="card" id="ticketCard">
+    <div class="section-title"><span>Références du ticket</span><button class="link" id="again">Effacer</button></div>
+    <p class="fillhint" style="margin:0 2px 14px">Recopie les 5 valeurs du bas de ton ticket.</p>
     <div id="rows"></div>
     <button class="fillbtn" id="fillAll">Copier pour le formulaire</button>
     <p class="fillhint">Puis, sur la page Super U, touche le favori <b>Remplir facture U</b>.</p>
@@ -150,19 +122,17 @@
     <div id="me"></div>
   </div>
 
-  <p class="hint">Les coordonnées sont enregistrées : à saisir une seule fois. Vérifiez toujours les chiffres lus sur la photo avant de valider le formulaire.</p>
+  <p class="hint">Les coordonnées ne sont saisies qu'une fois : elles restent enregistrées sur ce téléphone. Les références du ticket, elles, sont à retaper à chaque achat.</p>
 </div>
 
-<script src="config.js"></script>
 <script>
 (function () {
-  var RELAIS_URL = (window.FACTURE_U_CONFIG || {}).relaisUrl || '';
   var TICKET = [
-    { k: 'magasin', n: 1, label: 'Code du magasin' },
-    { k: 'ticket',  n: 2, label: 'Numéro du ticket' },
-    { k: 'date',    n: 3, label: "Date d'émission" },
-    { k: 'montant', n: 4, label: 'Montant TTC' },
-    { k: 'caisse',  n: 5, label: 'Code caisse' }
+    { k: 'magasin', n: 1, label: 'Code du magasin', mode: 'numeric', ph: '5 chiffres' },
+    { k: 'ticket',  n: 2, label: 'Numéro du ticket', mode: 'numeric', ph: 'colonne « Tick »' },
+    { k: 'date',    n: 3, label: "Date d'émission", mode: 'numeric', ph: 'JJ/MM/AAAA' },
+    { k: 'montant', n: 4, label: 'Montant TTC', mode: 'decimal', ph: 'ex. 18,59' },
+    { k: 'caisse',  n: 5, label: 'Code caisse', mode: 'numeric', ph: 'colonne « Ou »' }
   ];
   var ME = [
     { k: 'nom', label: 'Nom' },
@@ -190,7 +160,6 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
-  var status = $('status');
   var profil = {};
 
   function copyText(text, btn) {
@@ -228,6 +197,7 @@
     input.type = 'text';
     input.value = opts.value || '';
     input.placeholder = opts.placeholder || '—';
+    if (opts.mode) input.setAttribute('inputmode', opts.mode);
     input.setAttribute('aria-label', opts.label);
     if (opts.onInput) input.addEventListener('input', function () { opts.onInput(input.value); });
     field.appendChild(lab); field.appendChild(input);
@@ -271,80 +241,6 @@
     renderMe();
   })();
 
-  // --- Lecture du ticket ---
-  function shrink(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        var img = new Image();
-        img.onload = function () {
-          var max = 1568;
-          var s = Math.min(1, max / Math.max(img.width, img.height));
-          var c = document.createElement('canvas');
-          c.width = Math.round(img.width * s);
-          c.height = Math.round(img.height * s);
-          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
-        };
-        img.onerror = function () { reject(new Error('image')); };
-        img.src = reader.result;
-      };
-      reader.onerror = function () { reject(new Error('lecture')); };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  /* Le prompt de lecture est côté relais (il ne sert plus ici). */
-  var PROMPT_INUTILISE = [
-    "Tu lis un ticket de caisse Super U / Hyper U / U Express.",
-    "Extrais exactement ces 5 informations, telles qu'imprimées :",
-    "- magasin : le code magasin (5 chiffres, imprimé après \"Magasin\" en haut, et repris dans la ligne du bas)",
-    "- ticket : le numéro du ticket (colonne \"Tick\" de la ligne du bas)",
-    "- date : la date d'émission au format JJ/MM/AAAA (année sur 4 chiffres, complète 20xx si le ticket n'affiche que 2 chiffres)",
-    "- montant : le montant TOTAL TTC, avec une virgule comme séparateur décimal, sans symbole euro",
-    "- caisse : le code caisse (colonne \"Ou\" / numéro de caisse de la ligne du bas)",
-    "Réponds UNIQUEMENT par un objet JSON, sans texte autour et sans balises markdown :",
-    '{"magasin":"","ticket":"","date":"","montant":"","caisse":""}',
-    "Si une valeur est illisible, mets une chaîne vide."
-  ].join('\n');
-
-  async function read(file) {
-    $('btn').disabled = true;
-    status.className = 'status';
-    status.textContent = 'Lecture du ticket…';
-    try {
-      var b64 = await shrink(file);
-      if (!RELAIS_URL) throw new Error('RELAIS_ABSENT');
-      var res = await fetch(RELAIS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: b64 })
-      });
-      if (!res.ok) {
-        var detail = '';
-        try { detail = (await res.json()).error.message; } catch (e2) {}
-        throw new Error('HTTP ' + res.status + (detail ? ' — ' + detail : ''));
-      }
-      var out = await res.json();
-      show(out);
-      status.textContent = '';
-    } catch (e) {
-      status.className = 'status err';
-      var m = String(e && e.message || '');
-      status.textContent =
-        m === 'RELAIS_ABSENT'
-          ? "Lecture automatique pas encore activée (relais non configuré). Remplissez les cases à la main pour l'instant."
-          : /HTTP 429/.test(m)
-            ? "Trop de lectures d'affilée. Patientez une minute."
-            : /HTTP|Failed to fetch|NetworkError/.test(m)
-              ? "Connexion au service de lecture impossible (" + m + "). Les cases restent remplissables à la main."
-              : "Le ticket n'a pas pu être lu. Reprenez la photo bien à plat, avec le bas du ticket entier et sans reflet — ou remplissez les cases à la main.";
-      show({});
-    }
-    $('btn').disabled = false;
-  }
-
-  var ticketVals = {};
   function show(vals) {
     var rows = $('rows');
     rows.innerHTML = '';
@@ -352,7 +248,8 @@
     TICKET.forEach(function (f) {
       ticketVals[f.k] = vals[f.k] || '';
       rows.appendChild(makeRow({
-        n: f.n, label: f.label, value: vals[f.k] || '', placeholder: 'À compléter',
+        n: f.n, label: f.label, value: vals[f.k] || '', placeholder: f.ph || 'À compléter',
+        mode: f.mode,
         onInput: function (v) { ticketVals[f.k] = v; }
       }));
     });
@@ -396,11 +293,7 @@
     } else { fallback(text, ok); }
   });
 
-  $('btn').addEventListener('click', function () { $('file').click(); });
-  $('file').addEventListener('change', function (e) {
-    if (e.target.files && e.target.files[0]) read(e.target.files[0]);
-    e.target.value = '';
-  });
-  $('again').addEventListener('click', function () { $('file').click(); });
+  $('again').addEventListener('click', function () { show({}); });
+  show({});
 })();
 </script>
