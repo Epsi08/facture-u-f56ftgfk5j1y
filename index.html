@@ -111,7 +111,8 @@
 
   <div class="card" id="ticketCard">
     <div class="section-title"><span>Références du ticket</span><button class="link" id="again">Effacer</button></div>
-    <p class="fillhint" style="margin:0 2px 14px">Recopie les 5 valeurs du bas de ton ticket.</p>
+    <button class="fillbtn" id="pasteBtn" style="background:#495057;margin:0 0 6px">Coller le texte du ticket</button>
+    <p class="fillhint" style="margin:0 2px 14px">Photo du ticket → Photos → icône <b>texte</b> → Tout sélectionner → Copier. Sinon, tape les 5 valeurs à la main.</p>
     <div id="rows"></div>
     <button class="fillbtn" id="fillAll">Copier pour le formulaire</button>
     <p class="fillhint">Puis, sur la page Super U, touche le favori <b>Remplir facture U</b>.</p>
@@ -291,6 +292,114 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(ok, function () { fallback(text, ok); });
     } else { fallback(text, ok); }
+  });
+
+/* Extrait les 5 références d'un ticket Super U à partir de son texte brut. */
+function extraireTicket(texte) {
+  var lignes = String(texte || '').split(/\r?\n/).map(function (l) { return l.trim(); });
+  var out = { magasin: '', ticket: '', date: '', montant: '', caisse: '' };
+
+  /* --- Ligne du bas : Date | Heure | Magasin | Ou | Util | Tick ---
+     On lit l'en-tête pour connaître l'ordre des colonnes plutôt que de le supposer. */
+  for (var i = 0; i < lignes.length; i++) {
+    var head = lignes[i];
+    if (!/date/i.test(head) || !/magasin/i.test(head) || !/tick/i.test(head)) continue;
+    var cols = head.split(/\s+/).map(function (c) { return c.toLowerCase().replace(/[^a-zà-ÿ]/g, ''); });
+    for (var j = i + 1; j < Math.min(i + 4, lignes.length); j++) {
+      var vals = lignes[j].split(/\s+/);
+      if (vals.length < 3 || !/\d/.test(lignes[j])) continue;
+      cols.forEach(function (c, k) {
+        var v = vals[k];
+        if (!v) return;
+        if (c === 'date') out.date = v;
+        else if (c === 'magasin') out.magasin = v;
+        else if (c === 'ou') out.caisse = v;
+        else if (c === 'tick') out.ticket = v;
+      });
+      break;
+    }
+    if (out.date || out.magasin) break;
+  }
+
+  /* --- Repli si l'en-tête n'a pas été lu : ligne commençant par une date --- */
+  if (!out.date || !out.magasin) {
+    for (var m = 0; m < lignes.length; m++) {
+      var t = lignes[m].split(/\s+/);
+      if (!/^\d{2}\/\d{2}\/\d{2,4}$/.test(t[0]) || t.length < 4) continue;
+      out.date = out.date || t[0];
+      var nums = t.slice(1).filter(function (x) { return /^\d+$/.test(x); });
+      if (!out.magasin) out.magasin = (nums.filter(function (x) { return x.length === 5; })[0] || '');
+      if (!out.caisse && nums.length >= 2) out.caisse = nums[1];
+      if (!out.ticket && nums.length >= 1) out.ticket = nums[nums.length - 1];
+      break;
+    }
+  }
+
+  /* --- Code magasin : confirmé par la mention "Magasin 29620" en haut --- */
+  if (!out.magasin) {
+    for (var n = 0; n < lignes.length; n++) {
+      var mm = lignes[n].match(/magasin\D{0,12}(\d{5})\b/i);
+      if (mm) { out.magasin = mm[1]; break; }
+    }
+  }
+
+  /* --- Date : normalisée en JJ/MM/AAAA --- */
+  if (!out.date) {
+    for (var d = 0; d < lignes.length; d++) {
+      var dm = lignes[d].match(/\b(\d{2}\/\d{2}\/\d{2,4})\b/);
+      if (dm) { out.date = dm[1]; break; }
+    }
+  }
+  if (out.date) {
+    var p = out.date.split('/');
+    if (p.length === 3) {
+      if (p[2].length === 2) p[2] = '20' + p[2];
+      out.date = p[0] + '/' + p[1] + '/' + p[2];
+    }
+  }
+
+  /* --- Montant TTC : la ligne TOTAL fait foi ; sinon le plus gros montant. */
+  var montants = [];
+  var totalDirect = '';
+  lignes.forEach(function (l) {
+    var trouves = l.match(/\d{1,4}[.,]\d{2}/g) || [];
+    trouves.forEach(function (x) { montants.push(x.replace('.', ',')); });
+    if (!/\btotal\b/i.test(l)) return;
+    if (/tva|sous-?total|ht\b/i.test(l)) return;
+    var last = trouves[trouves.length - 1];
+    if (last) totalDirect = last.replace('.', ',');
+  });
+  if (totalDirect) out.montant = totalDirect;
+  else if (montants.length) {
+    out.montant = montants.sort(function (a, b) {
+      return parseFloat(b.replace(',', '.')) - parseFloat(a.replace(',', '.'));
+    })[0];
+  }
+
+  return out;
+}
+
+  $('pasteBtn').addEventListener('click', function () {
+    var btn = $('pasteBtn');
+    var traiter = function (texte) {
+      if (!texte || !texte.trim()) {
+        btn.textContent = 'Rien à coller'; setTimeout(reset, 2000); return;
+      }
+      var vals = extraireTicket(texte);
+      show(vals);
+      var trouves = ['magasin','ticket','date','montant','caisse'].filter(function (k) { return vals[k]; });
+      btn.textContent = trouves.length === 5
+        ? '5 valeurs trouvées — vérifie-les'
+        : trouves.length + '/5 trouvées — complète le reste';
+      btn.classList.add('done');
+      setTimeout(reset, 3200);
+    };
+    var reset = function () { btn.textContent = 'Coller le texte du ticket'; btn.classList.remove('done'); };
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(traiter, function () { traiter(window.prompt('Colle ici le texte du ticket :') || ''); });
+    } else {
+      traiter(window.prompt('Colle ici le texte du ticket :') || '');
+    }
   });
 
   $('again').addEventListener('click', function () { show({}); });
