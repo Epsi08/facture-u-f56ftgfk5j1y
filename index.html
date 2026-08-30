@@ -294,78 +294,62 @@
     } else { fallback(text, ok); }
   });
 
-/* Extrait les 5 références d'un ticket Super U à partir de son texte brut. */
+/* Extrait les 5 références d'un ticket Super U à partir de son texte brut (OCR compris).
+   Stratégie : la LIGNE DE VALEURS fait foi (sa structure est stable), pas les noms de colonnes
+   — l'OCR les déforme ("Magasin"→"Hagasin", "Tick"→"lick") et ils varient d'un magasin à
+   l'autre (colonne du code caisse vue en "Ou" et en "Cpv"). */
 function extraireTicket(texte) {
   var lignes = String(texte || '').split(/\r?\n/).map(function (l) { return l.trim(); });
   var out = { magasin: '', ticket: '', date: '', montant: '', caisse: '' };
 
-  /* --- Ligne du bas : Date | Heure | Magasin | Ou | Util | Tick ---
-     On lit l'en-tête pour connaître l'ordre des colonnes plutôt que de le supposer. */
+  /* --- Ligne récapitulative : <date> <heure> <magasin> <caisse> <util> <tick> --- */
   for (var i = 0; i < lignes.length; i++) {
-    var head = lignes[i];
-    if (!/date/i.test(head) || !/magasin/i.test(head) || !/tick/i.test(head)) continue;
-    var cols = head.split(/\s+/).map(function (c) { return c.toLowerCase().replace(/[^a-zà-ÿ]/g, ''); });
-    for (var j = i + 1; j < Math.min(i + 4, lignes.length); j++) {
-      var vals = lignes[j].split(/\s+/);
-      if (vals.length < 3 || !/\d/.test(lignes[j])) continue;
-      cols.forEach(function (c, k) {
-        var v = vals[k];
-        if (!v) return;
-        if (c === 'date') out.date = v;
-        else if (c === 'magasin') out.magasin = v;
-        else if (c === 'ou') out.caisse = v;
-        else if (c === 'tick') out.ticket = v;
-      });
-      break;
-    }
-    if (out.date || out.magasin) break;
+    var t = lignes[i].split(/\s+/).filter(Boolean);
+    if (t.length < 4) continue;
+    if (!/^\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}$/.test(t[0])) continue;   // commence par une date
+    if (!/^\d{1,2}[:h]\d{2}/.test(t[1] || '')) continue;              // suivie d'une heure
+    var nums = t.slice(2).filter(function (x) { return /^\d+$/.test(x); });
+    if (nums.length < 2) continue;
+    out.date = t[0];
+    out.magasin = nums[0] || '';
+    out.caisse = nums[1] || '';
+    out.ticket = nums[nums.length - 1] || '';   // Tick est toujours la dernière colonne
+    break;
   }
 
-  /* --- Repli si l'en-tête n'a pas été lu : ligne commençant par une date --- */
-  if (!out.date || !out.magasin) {
-    for (var m = 0; m < lignes.length; m++) {
-      var t = lignes[m].split(/\s+/);
-      if (!/^\d{2}\/\d{2}\/\d{2,4}$/.test(t[0]) || t.length < 4) continue;
-      out.date = out.date || t[0];
-      var nums = t.slice(1).filter(function (x) { return /^\d+$/.test(x); });
-      if (!out.magasin) out.magasin = (nums.filter(function (x) { return x.length === 5; })[0] || '');
-      if (!out.caisse && nums.length >= 2) out.caisse = nums[1];
-      if (!out.ticket && nums.length >= 1) out.ticket = nums[nums.length - 1];
-      break;
-    }
-  }
-
-  /* --- Code magasin : confirmé par la mention "Magasin 29620" en haut --- */
+  /* --- Replis si la ligne récapitulative est illisible --- */
   if (!out.magasin) {
     for (var n = 0; n < lignes.length; n++) {
-      var mm = lignes[n].match(/magasin\D{0,12}(\d{5})\b/i);
-      if (mm) { out.magasin = mm[1]; break; }
+      /* "Magasin 99698" — tolère les confusions OCR sur la 1re lettre. */
+      var mm = lignes[n].match(/[a-zà-ÿ]{6,8}\s*:?\s*(\d{5})\b/i);
+      if (mm && /agasin/i.test(lignes[n])) { out.magasin = mm[1]; break; }
     }
   }
-
-  /* --- Date : normalisée en JJ/MM/AAAA --- */
   if (!out.date) {
     for (var d = 0; d < lignes.length; d++) {
-      var dm = lignes[d].match(/\b(\d{2}\/\d{2}\/\d{2,4})\b/);
+      var dm = lignes[d].match(/\b(\d{2}[\/.]\d{2}[\/.]\d{2,4})\b/);
       if (dm) { out.date = dm[1]; break; }
     }
   }
+
+  /* --- Date normalisée en JJ/MM/AAAA --- */
   if (out.date) {
-    var p = out.date.split('/');
+    var p = out.date.replace(/\./g, '/').split('/');
     if (p.length === 3) {
       if (p[2].length === 2) p[2] = '20' + p[2];
-      out.date = p[0] + '/' + p[1] + '/' + p[2];
+      out.date = ('0' + p[0]).slice(-2) + '/' + ('0' + p[1]).slice(-2) + '/' + p[2];
     }
   }
 
-  /* --- Montant TTC : la ligne TOTAL fait foi ; sinon le plus gros montant. */
-  var montants = [];
-  var totalDirect = '';
+  /* --- Montant TTC : la ligne TOTAL fait foi ; sinon le plus gros montant.
+         On écarte TVA / SOUS-TOTAL, et on prend le dernier montant de la ligne
+         (les récapitulatifs affichent TVA, HT puis TTC). --- */
+  var montants = [], totalDirect = '';
   lignes.forEach(function (l) {
     var trouves = l.match(/\d{1,4}[.,]\d{2}/g) || [];
     trouves.forEach(function (x) { montants.push(x.replace('.', ',')); });
-    if (!/\btotal\b/i.test(l)) return;
-    if (/tva|sous-?total|ht\b/i.test(l)) return;
+    if (!/\bt[o0]tal\b/i.test(l)) return;
+    if (/tva|sous-?total/i.test(l)) return;
     var last = trouves[trouves.length - 1];
     if (last) totalDirect = last.replace('.', ',');
   });
