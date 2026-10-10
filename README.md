@@ -8,7 +8,21 @@ entre le ticket et le formulaire.
 
 **Profil retenu : client particulier** (nom + prénom, sans SIRET ni TVA).
 
-## Comment ça marche
+## Le plus rapide : le raccourci iPhone « Facture U »
+
+1. Toucher **Facture U** sur l'écran d'accueil → l'appareil photo s'ouvre → photographier le ticket.
+2. Le raccourci lit le ticket (OCR d'Apple, gratuit, sur le téléphone), copie tout et ouvre le
+   formulaire Super U dans Safari.
+3. Toucher la barre d'adresse → favori **Remplir facture U** → les 12 champs se remplissent.
+4. Vérifier, puis **Envoyer**. Le lien de la facture n'est valable que **5 minutes**.
+
+⏱️ Super U ne publie un ticket qu'**une heure après l'achat** : avant, le formulaire le refuse.
+
+Le raccourci se génère avec `python3 raccourci/construire.py --profil FICHIER --sortie CHEMIN`
+(signature Apple incluse). La version personnelle contient l'adresse : **ne jamais la mettre dans
+ce dépôt public** (`*.shortcut` est ignoré par git).
+
+## Sans le raccourci, depuis l'app
 
 1. Récupérer les 5 valeurs du ticket, au choix :
    - **Photo + texte Apple (recommandé)** : photographier le ticket, l'ouvrir dans Photos,
@@ -58,12 +72,15 @@ documentés dans `../REFERENCE-formulaire-super-u.md` — à lire avant toute mo
 | Fichier | Rôle |
 |---|---|
 | `index.html` | l'app : collage du texte du ticket, saisie, coordonnées enregistrées |
-| `src/date.js` | normalisation des dates (partagée par l'app et le favori) |
-| `src/ticket.js` | extraction des 5 références depuis le texte du ticket |
-| `src/bookmarklet.js` | source lisible du favori de pré-remplissage |
+| `src/date.js` | normalisation des dates (app + favori) |
+| `src/ticket.js` | extraction des 5 références — conçue pour l'OCR réel, qui ne garde pas les lignes |
+| `src/profil.js` | lecture du texte copié par le raccourci (profil + OCR) |
+| `src/remplir.js` | remplissage du formulaire Super U |
+| `src/bookmarklet.js` | colle du favori (presse-papier → remplissage) |
 | `installer-bookmarklet.html` | page d'installation du favori — **générée**, ne pas modifier à la main |
-| `tests/test.js` | tests (dont deux vrais tickets) : `node tests/test.js` |
-| `build.sh` | lance les tests puis régénère le favori dans la page d'installation |
+| `raccourci/construire.py` | génère et signe le raccourci iPhone |
+| `tests/test.js` | 18 tests, dont un vrai texte OCR Apple : `node tests/test.js` |
+| `build.sh` | lance les tests puis régénère le favori |
 
 ## Modifier le favori
 

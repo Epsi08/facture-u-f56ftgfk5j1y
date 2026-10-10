@@ -10,7 +10,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # One IIFE so date helpers do not leak into the Super U page's globals
-{ echo '(function(){'; cat src/date.js src/bookmarklet.js; echo '})();'; } > "$TMP/entree.js"
+{ echo '(function(){'; cat src/date.js src/ticket.js src/profil.js src/remplir.js src/bookmarklet.js; echo '})();'; } > "$TMP/entree.js"
 npx --yes esbuild@0.28.2 "$TMP/entree.js" --minify --log-level=warning > "$TMP/min.js"
 node --check "$TMP/min.js"
 
