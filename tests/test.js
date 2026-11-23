@@ -2,6 +2,7 @@
 const assert = require('assert');
 const { normaliserDate, versIso } = require('../src/date.js');
 const { extraireTicket } = require('../src/ticket.js');
+const { lireProfil, lireTexteRaccourci } = require('../src/profil.js');
 
 let echecs = 0;
 function cas(nom, fn) {
@@ -92,6 +93,46 @@ cas('en-tête de colonnes perdu par l\'OCR', () => {
 cas('exemple officiel du site Super U (colonne "Ou")', () => {
   const r = extraireTicket(`Magasin 29620\nTOTAL (1) Article 0,25 €\nSOUS-TOTAL 0,25 €\nTOTAL TVA 0,01 €\nDate Heure Magasin Ou Util Tick\n26/09/24 52:00 29620 103 303 2064`);
   assert.deepStrictEqual(r, { magasin: '29620', ticket: '2064', date: '26/09/2024', montant: '0,25', caisse: '103' });
+});
+
+
+/* --- Vrai texte produit par l'OCR d'Apple (Vision, même moteur que l'iPhone) ---
+   Il ne garde pas les lignes du ticket : montants et ligne récapitulative arrivent éclatés. */
+const OCR_APPLE = require('fs').readFileSync(require('path').join(__dirname, 'fixtures/ticket-2026-10-10-ocr-apple.txt'), 'utf8');
+
+cas('vrai OCR Apple du ticket du 10/10/2026 (texte éclaté en colonnes)', () => {
+  assert.deepStrictEqual(extraireTicket(OCR_APPLE),
+    { magasin: '99698', ticket: '30609', date: '10/10/2026', montant: '23,09', caisse: '005' });
+});
+cas('OCR éclaté + cumul d\'économies géant : la vérification arithmétique tient', () => {
+  const t = OCR_APPLE.replace('TICKET A CONSERVER', 'TOTAL ECONOMIES 2026\n187,40 €');
+  assert.strictEqual(extraireTicket(t).montant, '23,09');
+});
+cas('OCR éclaté : un ticket CB avec date et heure avant la ligne récapitulative', () => {
+  const t = 'CARTE BANCAIRE\n10/10/26 18:03\nMONTANT\n23,09 EUR\n' + OCR_APPLE;
+  const r = extraireTicket(t);
+  assert.strictEqual(r.ticket, '30609'); assert.strictEqual(r.caisse, '005');
+});
+
+/* --- Texte copié par le raccourci iPhone (profil + OCR de la photo) --- */
+const PROFIL_TEST = 'Nom: DUPONT\nPrénom: Jeanne\nAdresse: 1 rue des Tests\nComplément:\nCode postal: 97400\nVille: Saint-Denis\nTéléphone:\nE-mail:';
+
+cas('profil : libellés avec accents, valeurs vides ignorées sans planter', () => {
+  assert.deepStrictEqual(lireProfil(PROFIL_TEST),
+    { nom: 'DUPONT', prenom: 'Jeanne', voie: '1 rue des Tests', complement: '', cp: '97400', ville: 'Saint-Denis', tel: '', email: '' });
+});
+cas('texte du raccourci (profil + vrai OCR Apple) → 12 données pour le formulaire', () => {
+  const d = lireTexteRaccourci('FACTURE-U\n' + PROFIL_TEST + '\n=== TICKET ===\n' + OCR_APPLE);
+  assert.strictEqual(d.nom, 'DUPONT'); assert.strictEqual(d.cp, '97400');
+  assert.strictEqual(d.magasin, '99698'); assert.strictEqual(d.ticket, '30609');
+  assert.strictEqual(d.date, '10/10/2026'); assert.strictEqual(d.montant, '23,09'); assert.strictEqual(d.caisse, '005');
+});
+cas('le texte du ticket ne pollue pas le profil (ex. "Ville:" absent du ticket)', () => {
+  const d = lireTexteRaccourci('FACTURE-U\nNom: X\n=== TICKET ===\nVille: PIEGE\n' + OCR_APPLE);
+  assert.strictEqual(d.ville, undefined);
+});
+cas('un JSON de l\'app n\'est pas pris pour du texte de raccourci', () => {
+  assert.strictEqual(lireTexteRaccourci('{"v":1,"magasin":"99698"}'), null);
 });
 
 console.log(echecs ? `\n${echecs} échec(s)` : '\nTous les tests passent.');
