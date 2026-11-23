@@ -1,3 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d7d7d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Facture U">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Facture Super U</title>
+<style>
+  html { background: #efece3; }
+  body {
+    margin: 0;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  }
+</style>
+</head>
+<body>
 <div id="root">
   <style>
     #root {
@@ -39,8 +60,6 @@
       padding: 14px;
       margin-bottom: 12px;
     }
-
-    input[type=file] { display: none; }
 
     .row {
       display: flex; align-items: center; gap: 10px;
@@ -126,14 +145,16 @@
   <p class="hint">Les coordonnées ne sont saisies qu'une fois : elles restent enregistrées sur ce téléphone. Les références du ticket, elles, sont à retaper à chaque achat.</p>
 </div>
 
+<script src="src/date.js"></script>
+<script src="src/ticket.js"></script>
 <script>
 (function () {
   var TICKET = [
     { k: 'magasin', n: 1, label: 'Code du magasin', mode: 'numeric', ph: '5 chiffres' },
-    { k: 'ticket',  n: 2, label: 'Numéro du ticket', mode: 'numeric', ph: 'colonne « Tick »' },
+    { k: 'ticket',  n: 2, label: 'Numéro du ticket', mode: 'numeric', ph: 'dernier nombre, ligne du bas' },
     { k: 'date',    n: 3, label: "Date d'émission", mode: 'numeric', ph: 'JJ/MM/AAAA' },
     { k: 'montant', n: 4, label: 'Montant TTC', mode: 'decimal', ph: 'ex. 18,59' },
-    { k: 'caisse',  n: 5, label: 'Code caisse', mode: 'numeric', ph: 'colonne « Ou »' }
+    { k: 'caisse',  n: 5, label: 'Code caisse', mode: 'numeric', ph: '2ᵉ nombre après le magasin' }
   ];
   var ME = [
     { k: 'nom', label: 'Nom' },
@@ -200,7 +221,7 @@
     input.placeholder = opts.placeholder || '—';
     if (opts.mode) input.setAttribute('inputmode', opts.mode);
     input.setAttribute('aria-label', opts.label);
-    if (opts.onInput) input.addEventListener('input', function () { opts.onInput(input.value); });
+    if (opts.onInput) input.addEventListener('input', function () { opts.onInput(input.value, input); });
     field.appendChild(lab); field.appendChild(input);
     var btn = document.createElement('button');
     btn.className = 'copy'; btn.textContent = 'Copier';
@@ -242,6 +263,14 @@
     renderMe();
   })();
 
+  /* "10102026" typed on the iPhone numeric keypad (no "/" key) becomes "10/10/2026". */
+  function formaterSaisieDate(v) {
+    if (!/^[\d\/]*$/.test(v)) return v;
+    var c = v.replace(/\//g, '').slice(0, 8);
+    return c.slice(0, 2) + (c.length > 2 ? '/' + c.slice(2, 4) : '') + (c.length > 4 ? '/' + c.slice(4) : '');
+  }
+
+  var ticketVals = {};
   function show(vals) {
     var rows = $('rows');
     rows.innerHTML = '';
@@ -251,7 +280,10 @@
       rows.appendChild(makeRow({
         n: f.n, label: f.label, value: vals[f.k] || '', placeholder: f.ph || 'À compléter',
         mode: f.mode,
-        onInput: function (v) { ticketVals[f.k] = v; }
+        onInput: function (v, input) {
+          if (f.k === 'date') v = input.value = formaterSaisieDate(v);
+          ticketVals[f.k] = v;
+        }
       }));
     });
     $('ticketCard').style.display = '';
@@ -263,8 +295,8 @@
       v: 1,
       magasin: ticketVals.magasin || '',
       ticket: ticketVals.ticket || '',
-      date: ticketVals.date || '',
-      montant: ticketVals.montant || '',
+      date: normaliserDate(ticketVals.date) || ticketVals.date || '',
+      montant: (ticketVals.montant || '').replace('.', ','),
       caisse: ticketVals.caisse || '',
       nom: profil.nom || '',
       prenom: profil.prenom || '',
@@ -294,75 +326,6 @@
     } else { fallback(text, ok); }
   });
 
-/* Extrait les 5 références d'un ticket Super U à partir de son texte brut (OCR compris).
-   Stratégie : la LIGNE DE VALEURS fait foi (sa structure est stable), pas les noms de colonnes
-   — l'OCR les déforme ("Magasin"→"Hagasin", "Tick"→"lick") et ils varient d'un magasin à
-   l'autre (colonne du code caisse vue en "Ou" et en "Cpv"). */
-function extraireTicket(texte) {
-  var lignes = String(texte || '').split(/\r?\n/).map(function (l) { return l.trim(); });
-  var out = { magasin: '', ticket: '', date: '', montant: '', caisse: '' };
-
-  /* --- Ligne récapitulative : <date> <heure> <magasin> <caisse> <util> <tick> --- */
-  for (var i = 0; i < lignes.length; i++) {
-    var t = lignes[i].split(/\s+/).filter(Boolean);
-    if (t.length < 4) continue;
-    if (!/^\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}$/.test(t[0])) continue;   // commence par une date
-    if (!/^\d{1,2}[:h]\d{2}/.test(t[1] || '')) continue;              // suivie d'une heure
-    var nums = t.slice(2).filter(function (x) { return /^\d+$/.test(x); });
-    if (nums.length < 2) continue;
-    out.date = t[0];
-    out.magasin = nums[0] || '';
-    out.caisse = nums[1] || '';
-    out.ticket = nums[nums.length - 1] || '';   // Tick est toujours la dernière colonne
-    break;
-  }
-
-  /* --- Replis si la ligne récapitulative est illisible --- */
-  if (!out.magasin) {
-    for (var n = 0; n < lignes.length; n++) {
-      /* "Magasin 99698" — tolère les confusions OCR sur la 1re lettre. */
-      var mm = lignes[n].match(/[a-zà-ÿ]{6,8}\s*:?\s*(\d{5})\b/i);
-      if (mm && /agasin/i.test(lignes[n])) { out.magasin = mm[1]; break; }
-    }
-  }
-  if (!out.date) {
-    for (var d = 0; d < lignes.length; d++) {
-      var dm = lignes[d].match(/\b(\d{2}[\/.]\d{2}[\/.]\d{2,4})\b/);
-      if (dm) { out.date = dm[1]; break; }
-    }
-  }
-
-  /* --- Date normalisée en JJ/MM/AAAA --- */
-  if (out.date) {
-    var p = out.date.replace(/\./g, '/').split('/');
-    if (p.length === 3) {
-      if (p[2].length === 2) p[2] = '20' + p[2];
-      out.date = ('0' + p[0]).slice(-2) + '/' + ('0' + p[1]).slice(-2) + '/' + p[2];
-    }
-  }
-
-  /* --- Montant TTC : la ligne TOTAL fait foi ; sinon le plus gros montant.
-         On écarte TVA / SOUS-TOTAL, et on prend le dernier montant de la ligne
-         (les récapitulatifs affichent TVA, HT puis TTC). --- */
-  var montants = [], totalDirect = '';
-  lignes.forEach(function (l) {
-    var trouves = l.match(/\d{1,4}[.,]\d{2}/g) || [];
-    trouves.forEach(function (x) { montants.push(x.replace('.', ',')); });
-    if (!/\bt[o0]tal\b/i.test(l)) return;
-    if (/tva|sous-?total/i.test(l)) return;
-    var last = trouves[trouves.length - 1];
-    if (last) totalDirect = last.replace('.', ',');
-  });
-  if (totalDirect) out.montant = totalDirect;
-  else if (montants.length) {
-    out.montant = montants.sort(function (a, b) {
-      return parseFloat(b.replace(',', '.')) - parseFloat(a.replace(',', '.'));
-    })[0];
-  }
-
-  return out;
-}
-
   $('pasteBtn').addEventListener('click', function () {
     var btn = $('pasteBtn');
     var traiter = function (texte) {
@@ -390,3 +353,5 @@ function extraireTicket(texte) {
   show({});
 })();
 </script>
+</body>
+</html>

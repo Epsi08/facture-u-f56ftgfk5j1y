@@ -57,5 +57,21 @@ documentés dans `../REFERENCE-formulaire-super-u.md` — à lire avant toute mo
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | l'app : saisie des références + coordonnées enregistrées |
-| `installer-bookmarklet.html` | installation du favori de pré-remplissage |
+| `index.html` | l'app : collage du texte du ticket, saisie, coordonnées enregistrées |
+| `src/date.js` | normalisation des dates (partagée par l'app et le favori) |
+| `src/ticket.js` | extraction des 5 références depuis le texte du ticket |
+| `src/bookmarklet.js` | source lisible du favori de pré-remplissage |
+| `installer-bookmarklet.html` | page d'installation du favori — **générée**, ne pas modifier à la main |
+| `tests/test.js` | tests (dont deux vrais tickets) : `node tests/test.js` |
+| `build.sh` | lance les tests puis régénère le favori dans la page d'installation |
+
+## Modifier le favori
+
+Éditer `src/bookmarklet.js` ou `src/date.js`, puis :
+
+```bash
+bash build.sh
+```
+
+Après une régénération, le favori déjà installé sur l'iPhone doit être **remplacé** (étape 3 de
+la page d'installation) pour profiter de la correction.
