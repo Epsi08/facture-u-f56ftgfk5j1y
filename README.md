@@ -59,13 +59,13 @@ attendu. **Il ne valide jamais le formulaire** : le dernier mot reste à toi.
   L'app ne fait que **découper le texte** obtenu, avec un extracteur couvert par des tests
   (dont un cas d'OCR dégradé).
   Le code de la lecture auto et du relais Cloudflare reste dans l'historique Git
-  (commit `0b91a25`) si l'envie revient un jour.
+  (premier commit du dépôt, « Ticket to Super U invoice… ») si l'envie revient un jour.
 - **Aucun serveur, aucun compte, aucune donnée qui sort du téléphone.**
 
 ## Références techniques
 
 Les pièges du formulaire Super U (Cloudflare, react-select, format de date, id aléatoires) sont
-documentés dans `../REFERENCE-formulaire-super-u.md` — à lire avant toute modification du favori.
+documentés dans `docs/formulaire-super-u.md` — à lire avant toute modification du favori.
 
 ## Fichiers
 
@@ -77,18 +77,20 @@ documentés dans `../REFERENCE-formulaire-super-u.md` — à lire avant toute mo
 | `src/profil.js` | lecture du texte copié par le raccourci (profil + OCR) |
 | `src/remplir.js` | remplissage du formulaire Super U |
 | `src/bookmarklet.js` | colle du favori (presse-papier → remplissage) |
-| `installer-bookmarklet.html` | page d'installation du favori — **générée**, ne pas modifier à la main |
+| `installer.modele.html` | modèle de la page d'installation (texte à modifier ici) |
+| `installer-bookmarklet.html` | page d'installation du favori — **générée** par `build.sh`, ne pas modifier à la main |
+| `docs/formulaire-super-u.md` | structure du formulaire Super U et ses pièges — à lire avant toute modification |
 | `raccourci/construire.py` | génère et signe le raccourci iPhone |
-| `tests/test.js` | 18 tests, dont un vrai texte OCR Apple : `node tests/test.js` |
+| `tests/test.js` | 32 tests, dont un vrai texte OCR Apple (valeurs anonymisées) : `node tests/test.js` |
 | `build.sh` | lance les tests puis régénère le favori |
 
 ## Modifier le favori
 
-Éditer `src/bookmarklet.js` ou `src/date.js`, puis :
+Éditer les fichiers de `src/` (le favori embarque `date.js`, `ticket.js`, `profil.js`, `remplir.js` et `bookmarklet.js`), puis :
 
 ```bash
 bash build.sh
 ```
 
-Après une régénération, le favori déjà installé sur l'iPhone doit être **remplacé** (étape 3 de
+Après une régénération, le favori déjà installé sur l'iPhone doit être **remplacé** (étape 2 de
 la page d'installation) pour profiter de la correction.

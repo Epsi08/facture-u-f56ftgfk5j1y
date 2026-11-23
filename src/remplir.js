@@ -1,21 +1,29 @@
 /* Fills the "Ma facture U" form (CLIENT PARTICULIER profile) from a data object.
    Shared by the bookmarklet and the iPhone Shortcut — both builds concatenate it after src/date.js
-   (it needs versIso). Field names come from REFERENCE-formulaire-super-u.md: target the `name`
+   (it needs versIso). Field names come from docs/formulaire-super-u.md: target the `name`
    attributes, never the ids, which are random UUIDs regenerated on every page load.
 
    data = { magasin, ticket, date, montant, caisse, nom, prenom, voie, complement, cp, ville, tel, email } */
 
-var TOAST_MS = 4000;
+var TOAST_MS = 12000;
 
-function estPageFactureU() { return /magasins-u\.com/.test(location.hostname); }
+function estPageFactureU() { return /(^|\.)magasins-u\.com$/.test(location.hostname); }
 
-function toast(msg, ok) {
+// niveau: 'ok' (green), 'attention' (orange: check these fields), 'erreur' (red: fill by hand).
+// Stays until tapped, or TOAST_MS: the user reads it while looking at the form.
+function toast(msg, niveau) {
+  var ancien = document.getElementById('facture-u-toast');
+  if (ancien) ancien.remove();
+  var couleurs = { ok: '#0b7285', attention: '#b35c00', erreur: '#c92a2a' };
   var d = document.createElement('div');
+  d.id = 'facture-u-toast';
+  d.setAttribute('role', 'status');
   d.textContent = msg;
   d.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;'
-    + 'background:' + (ok ? '#0b7285' : '#c92a2a') + ';color:#fff;padding:12px 18px;border-radius:10px;'
-    + 'font:15px/1.4 -apple-system,system-ui,sans-serif;max-width:88vw;text-align:center;'
-    + 'box-shadow:0 4px 18px rgba(0,0,0,.25)';
+    + 'background:' + (couleurs[niveau] || couleurs.erreur) + ';color:#fff;padding:14px 18px;border-radius:12px;'
+    + 'font:16px/1.45 -apple-system,system-ui,sans-serif;max-width:90vw;text-align:left;white-space:pre-line;'
+    + 'box-shadow:0 4px 18px rgba(0,0,0,.3)';
+  d.addEventListener('click', function () { d.remove(); });
   document.body.appendChild(d);
   setTimeout(function () { d.remove(); }, TOAST_MS);
 }
@@ -75,6 +83,13 @@ async function pickStore(code) {
 
 // Resolves to { remplis, manquants, message } and shows the outcome on the page.
 async function remplirFormulaireU(data) {
+  // The page may still be loading (or showing Cloudflare's check): wait up to 10 s for the form
+  for (var essai = 0; essai < 20 && !byName('facture-u-ticketNumber'); essai++) await wait(500);
+  if (!byName('facture-u-ticketNumber')) {
+    toast('Formulaire pas encore affiché.\nAttends qu\'il apparaisse, puis relance le favori.', 'erreur');
+    return { remplis: 0, manquants: ['formulaire'], message: 'formulaire absent' };
+  }
+
   var particulier = document.getElementById('particulier');
   if (particulier && !particulier.checked) { particulier.click(); await wait(900); }
 
@@ -107,8 +122,20 @@ async function remplirFormulaireU(data) {
   var storeOk = await pickStore(data.magasin);
   if (storeOk) filled++; else if (data.magasin) missing.push('code magasin');
 
-  var message = filled + ' champ' + (filled > 1 ? 's' : '') + ' rempli' + (filled > 1 ? 's' : '');
-  message += missing.length ? ' — à finir à la main : ' + missing.join(', ') : '. Vérifie puis valide.';
-  toast(message, missing.length === 0);
+  // Ticket values the reader could not find, or is unsure about, are named explicitly: a green
+  // "all filled" while the ticket number is empty is what the audit caught.
+  var NOMS = { magasin: 'code magasin', ticket: 'n° de ticket', date: 'date', montant: 'montant', caisse: 'code caisse' };
+  var absents = ['magasin', 'ticket', 'date', 'montant', 'caisse'].filter(function (k) { return !String(data[k] || '').trim(); })
+    .map(function (k) { return NOMS[k]; });
+  missing.forEach(function (m) { if (absents.indexOf(m) === -1) absents.push(m); });
+  var douteux = (data.doutes || []).filter(function (k) { return String(data[k] || '').trim(); })
+    .map(function (k) { return NOMS[k] || k; });
+
+  var lignes = [], niveau = 'ok';
+  if (absents.length) { lignes.push('À remplir à la main : ' + absents.join(', ')); niveau = 'erreur'; }
+  if (douteux.length) { lignes.push('À vérifier : ' + douteux.join(', ')); if (niveau === 'ok') niveau = 'attention'; }
+  if (!lignes.length) lignes.push(filled + ' champs remplis. Vérifie puis envoie.');
+  var message = lignes.join('\n');
+  toast(message, niveau);
   return { remplis: filled, manquants: missing, message: message };
 }

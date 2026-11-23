@@ -11,139 +11,124 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Facture Super U</title>
 <style>
-  html { background: #efece3; }
+  :root {
+    --ink: #16202b;
+    --ink-soft: #3d4a57;
+    --paper: #faf9f4;
+    --paper-line: #e2ded1;
+    --teal: #0d7d7d;
+    --orange: #b35c00;
+    --orange-bg: #fff1dc;
+    --red: #c92a2a;
+    --red-bg: #ffe8e8;
+    --p1: #c75d0e; --p2: #2c7d3a; --p3: #2368b0; --p4: #c42424; --p5: #7a3bb0;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  html { background: #efece3; -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    font-family: var(--sans); color: var(--ink);
   }
+  * { box-sizing: border-box; }
+  main { max-width: 560px; margin: 0 auto; }
+
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 4px 2px 12px; }
+  .head h1 { font-size: 17px; letter-spacing: .1em; text-transform: uppercase; margin: 0; font-weight: 800; }
+
+  .liens { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+  .liens a {
+    flex: 1 1 160px; text-align: center; padding: 11px 10px; border-radius: 10px;
+    border: 1px solid var(--paper-line); background: #fff; color: var(--teal);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+
+  .card { background: var(--paper); border: 1px solid var(--paper-line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .section-title {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px;
+  }
+  .link {
+    background: none; border: 0; padding: 8px 0 8px 12px; min-height: 44px;
+    font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--teal); cursor: pointer; text-decoration: underline;
+  }
+
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 6px; margin: 0 -6px; border-bottom: 1px dashed var(--paper-line); border-radius: 8px; }
+  .row:last-child { border-bottom: 0; }
+  .row.douteux { background: var(--orange-bg); }
+  .row.absent { background: var(--red-bg); }
+  .etat { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .row.douteux .etat { color: var(--orange); }
+  .row.absent .etat { color: var(--red); }
+
+  .pill {
+    flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 14px; font-weight: 700; border: 2px solid currentColor;
+  }
+  .p1 { color: var(--p1); } .p2 { color: var(--p2); } .p3 { color: var(--p3); } .p4 { color: var(--p4); } .p5 { color: var(--p5); }
+
+  .field { flex: 1 1 auto; min-width: 0; }
+  .field label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px; }
+  .field input {
+    width: 100%; border: 0; background: transparent; padding: 2px 0;
+    font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--ink);
+  }
+  .field input:focus { outline: 0; background: #fff5cc; border-radius: 4px; }
+  .field input::placeholder { color: #6f6a5e; font-weight: 400; }
+
+  .copy {
+    flex: 0 0 auto; min-width: 74px; min-height: 44px; padding: 9px 12px;
+    border: 1px solid var(--paper-line); background: #fff; border-radius: 9px;
+    font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--teal); cursor: pointer;
+  }
+  .copy.done { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+  .fillbtn {
+    width: 100%; margin-top: 14px; padding: 15px; border: 0; border-radius: 10px;
+    background: var(--teal); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .fillbtn.secondaire { background: #495057; margin: 0 0 6px; }
+  .fillbtn.done { background: #2b8a3e; }
+  .fillhint { margin: 8px 2px 0; font-size: 14px; color: var(--ink-soft); line-height: 1.45; }
+  .statut { margin: 8px 2px 12px; font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .statut:empty { display: none; }
+  .statut.ok { color: #2b7a3b; } .statut.attention { color: var(--orange); } .statut.erreur { color: var(--red); }
+
+  .hint { font-size: 14px; color: var(--ink-soft); margin: 0 2px 12px; line-height: 1.5; }
+  @media (prefers-reduced-motion: no-preference) { .copy, .fillbtn { transition: background .15s, color .15s; } }
 </style>
 </head>
 <body>
-<div id="root">
-  <style>
-    #root {
-      --ink: #16202b;
-      --ink-soft: #33414f;
-      --paper: #faf9f4;
-      --paper-line: #e2ded1;
-      --teal: #0d7d7d;
-      --p1: #e8721c;
-      --p2: #3aa14b;
-      --p3: #2b7fd4;
-      --p4: #d92b2b;
-      --p5: #8b45c4;
-      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-      font-family: var(--sans);
-      color: var(--ink);
-      max-width: 560px;
-      margin: 0 auto;
-      -webkit-text-size-adjust: 100%;
-    }
-    #root * { box-sizing: border-box; }
-
-    .head {
-      display: flex; align-items: baseline; gap: 10px;
-      padding: 4px 2px 14px;
-    }
-    .head h1 {
-      font-size: 15px; letter-spacing: .14em; text-transform: uppercase;
-      margin: 0; font-weight: 800;
-    }
-    .head p { margin: 0; font-size: 12px; color: var(--ink-soft); }
-
-    .card {
-      background: var(--paper);
-      border: 1px solid var(--paper-line);
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-
-    .row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 0;
-      border-bottom: 1px dashed var(--paper-line);
-    }
-    .row:last-child { border-bottom: 0; }
-
-    .pill {
-      flex: 0 0 24px; height: 24px; border-radius: 50%;
-      display: grid; place-items: center;
-      font-size: 13px; font-weight: 700;
-      border: 2px solid currentColor;
-    }
-    .p1 { color: var(--p1); } .p2 { color: var(--p2); } .p3 { color: var(--p3); }
-    .p4 { color: var(--p4); } .p5 { color: var(--p5); }
-
-    .field { flex: 1 1 auto; min-width: 0; }
-    .field label {
-      display: block; font-size: 10px; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px;
-    }
-    .field input {
-      width: 100%; border: 0; background: transparent; padding: 0;
-      font-family: var(--mono); font-size: 17px; font-weight: 600;
-      color: var(--ink);
-    }
-    .field input:focus { outline: 0; background: #fff5cc; border-radius: 4px; }
-    .field input::placeholder { color: #b9b3a4; font-weight: 400; }
-
-    .copy {
-      flex: 0 0 auto;
-      border: 1px solid var(--paper-line); background: #fff;
-      border-radius: 9px; padding: 9px 12px;
-      font-family: var(--sans); font-size: 12px; font-weight: 700;
-      color: var(--teal); cursor: pointer; min-width: 74px;
-    }
-    .copy.done { background: var(--teal); color: #fff; border-color: var(--teal); }
-    .fillbtn {
-      width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 10px;
-      background: var(--teal); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
-    }
-    .fillbtn.done { background: #2b8a3e; }
-    .fillbtn:disabled { opacity: .5; }
-    .fillhint { margin: 8px 2px 0; font-size: 13px; color: #666; line-height: 1.4; }
-
-    .section-title {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-      color: var(--ink-soft); margin: 0 0 8px;
-    }
-    .link {
-      background: none; border: 0; padding: 0;
-      font-family: var(--sans); font-size: 12px; font-weight: 600;
-      color: var(--teal); cursor: pointer; text-decoration: underline;
-    }
-    .foot { display: flex; gap: 10px; justify-content: space-between; padding: 2px 2px 20px; }
-    .hint { font-size: 12px; color: var(--ink-soft); margin: 0 2px 12px; line-height: 1.45; }
-    @media (prefers-reduced-motion: no-preference) {
-      .copy { transition: background .15s, color .15s; }
-    }
-  </style>
-
+<main>
   <div class="head">
     <h1>Facture Super U</h1>
-    <p>Super U</p>
   </div>
 
-  <div class="card" id="ticketCard">
+  <nav class="liens">
+    <a href="https://www.magasins-u.com/ma-facture-u" target="_blank" rel="noopener">Ouvrir le formulaire Super U</a>
+    <a href="installer-bookmarklet.html">Installer le favori</a>
+  </nav>
+
+  <section class="card" id="ticketCard">
     <div class="section-title"><span>Références du ticket</span><button class="link" id="again">Effacer</button></div>
-    <button class="fillbtn" id="pasteBtn" style="background:#495057;margin:0 0 6px">Coller le texte du ticket</button>
-    <p class="fillhint" style="margin:0 2px 14px">Photo du ticket → Photos → icône <b>texte</b> → Tout sélectionner → Copier. Sinon, tape les 5 valeurs à la main.</p>
+    <button class="fillbtn secondaire" id="pasteBtn">Coller le texte du ticket</button>
+    <p class="fillhint" style="margin:0 2px 6px">Photo du ticket → Photos → icône <b>texte</b> → Tout sélectionner → Copier. Sinon, tape les 5 valeurs à la main.</p>
+    <p class="statut" id="statut" role="status"></p>
     <div id="rows"></div>
     <button class="fillbtn" id="fillAll">Copier pour le formulaire</button>
-    <p class="fillhint">Puis, sur la page Super U, touche le favori <b>Remplir facture U</b>.</p>
-  </div>
+    <p class="fillhint">Puis, sur la page Super U dans Safari, touche la barre d'adresse et le favori <b>Remplir facture U</b>.</p>
+  </section>
 
-  <div class="card">
+  <section class="card">
     <div class="section-title"><span>Mes coordonnées</span><span id="saved" style="text-transform:none;letter-spacing:0"></span></div>
     <div id="me"></div>
-  </div>
+  </section>
 
-  <p class="hint">Les coordonnées ne sont saisies qu'une fois : elles restent enregistrées sur ce téléphone. Les références du ticket, elles, sont à retaper à chaque achat.</p>
-</div>
+  <p class="hint">Les coordonnées ne sont saisies qu'une fois : elles restent enregistrées sur ce téléphone.
+    Le raccourci iPhone « Facture U » a sa propre copie : en cas de déménagement, mets les deux à jour.</p>
+  <p class="hint">⏱️ Super U ne publie un ticket qu'une heure après l'achat, et le lien de la facture ne vit que 5 minutes.</p>
+</main>
 
 <script src="src/date.js"></script>
 <script src="src/ticket.js"></script>
@@ -157,49 +142,36 @@
     { k: 'caisse',  n: 5, label: 'Code caisse', mode: 'numeric', ph: '2ᵉ nombre après le magasin' }
   ];
   var ME = [
-    { k: 'nom', label: 'Nom' },
-    { k: 'prenom', label: 'Prénom' },
-    { k: 'voie', label: 'Numéro et libellé de voie' },
-    { k: 'complement', label: 'Complément d\'adresse' },
-    { k: 'cp', label: 'Code postal' },
-    { k: 'ville', label: 'Ville' },
-    { k: 'email', label: 'Email' },
-    { k: 'tel', label: 'Téléphone' }
+    { k: 'nom', label: 'Nom', type: 'text', auto: 'family-name' },
+    { k: 'prenom', label: 'Prénom', type: 'text', auto: 'given-name' },
+    { k: 'voie', label: 'Numéro et libellé de voie', type: 'text', auto: 'address-line1' },
+    { k: 'complement', label: "Complément d'adresse", type: 'text', auto: 'address-line2' },
+    { k: 'cp', label: 'Code postal', type: 'text', auto: 'postal-code', mode: 'numeric' },
+    { k: 'ville', label: 'Ville', type: 'text', auto: 'address-level2' },
+    { k: 'email', label: 'E-mail (facultatif)', type: 'email', auto: 'email' },
+    { k: 'tel', label: 'Téléphone (facultatif)', type: 'tel', auto: 'tel' }
   ];
-
-  /* Dans un artifact Claude c'est window.storage ; sur un site normal, localStorage. */
-  var store = {
-    get: function (k) {
-      if (window.storage && window.storage.get) return window.storage.get(k);
-      try { return Promise.resolve({ value: localStorage.getItem(k) }); }
-      catch (e) { return Promise.resolve(null); }
-    },
-    set: function (k, v) {
-      if (window.storage && window.storage.set) return window.storage.set(k, v);
-      try { localStorage.setItem(k, v); return Promise.resolve(); }
-      catch (e) { return Promise.reject(e); }
-    }
-  };
+  var CLE_PROFIL = 'factureu:profil';
 
   var $ = function (id) { return document.getElementById(id); };
   var profil = {};
+  var ticketVals = {};
 
-  function copyText(text, btn) {
-    var done = function () {
-      btn.textContent = 'Copié';
-      btn.classList.add('done');
-      setTimeout(function () { btn.textContent = 'Copier'; btn.classList.remove('done'); }, 1200);
-    };
+  // Resolves true only when the text really reached the clipboard.
+  function copier(texte) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
-    } else { fallback(text, done); }
+      return navigator.clipboard.writeText(texte).then(function () { return true; }, function () { return copierSecours(texte); });
+    }
+    return Promise.resolve(copierSecours(texte));
   }
-  function fallback(text, done) {
+  function copierSecours(texte) {
     var ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    ta.value = texte; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (e) {}
-    document.body.removeChild(ta); done();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
   }
 
   function makeRow(opts) {
@@ -209,60 +181,80 @@
       var pill = document.createElement('span');
       pill.className = 'pill p' + opts.n;
       pill.textContent = opts.n;
+      pill.setAttribute('aria-hidden', 'true');
       row.appendChild(pill);
     }
     var field = document.createElement('div');
     field.className = 'field';
     var lab = document.createElement('label');
-    lab.textContent = opts.label;
     var input = document.createElement('input');
-    input.type = 'text';
+    input.id = 'champ-' + opts.k;
+    lab.htmlFor = input.id;
+    lab.textContent = opts.label;
+    input.type = opts.type || 'text';
     input.value = opts.value || '';
-    input.placeholder = opts.placeholder || '—';
+    input.placeholder = opts.placeholder || '';
     if (opts.mode) input.setAttribute('inputmode', opts.mode);
-    input.setAttribute('aria-label', opts.label);
-    if (opts.onInput) input.addEventListener('input', function () { opts.onInput(input.value, input); });
-    field.appendChild(lab); field.appendChild(input);
-    var btn = document.createElement('button');
-    btn.className = 'copy'; btn.textContent = 'Copier';
-    btn.addEventListener('click', function () { copyText(input.value, btn); });
-    row.appendChild(field); row.appendChild(btn);
+    if (opts.auto) input.setAttribute('autocomplete', opts.auto);
+    input.addEventListener('input', function () { opts.onInput(input.value, input, row); });
+    var etat = document.createElement('span');
+    etat.className = 'etat';
+    field.appendChild(lab); field.appendChild(input); field.appendChild(etat);
+    row.appendChild(field);
+    if (opts.copiable) {
+      var btn = document.createElement('button');
+      btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copier';
+      btn.setAttribute('aria-label', 'Copier ' + opts.label);
+      btn.addEventListener('click', function () {
+        copier(input.value).then(function (ok) {
+          btn.textContent = ok ? 'Copié' : 'Échec';
+          btn.classList.toggle('done', ok);
+          setTimeout(function () { btn.textContent = 'Copier'; btn.classList.remove('done'); }, 1200);
+        });
+      });
+      row.appendChild(btn);
+    }
     return row;
   }
 
-  // --- Coordonnées enregistrées ---
+  function marquer(row, etat) {
+    row.classList.remove('douteux', 'absent');
+    var span = row.querySelector('.etat');
+    span.textContent = '';
+    if (etat === 'douteux') { row.classList.add('douteux'); span.textContent = 'À vérifier sur le ticket'; }
+    if (etat === 'absent') { row.classList.add('absent'); span.textContent = 'Introuvable : à taper'; }
+  }
+
+  // --- Saved details (localStorage of this site only) ---
+  function lireProfilEnregistre() {
+    try { return JSON.parse(localStorage.getItem(CLE_PROFIL) || '{}') || {}; } catch (e) { return {}; }
+  }
+  var saveTimer = null;
+  function enregistrerProfil() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        localStorage.setItem(CLE_PROFIL, JSON.stringify(profil));
+        $('saved').textContent = 'Enregistré';
+      } catch (e) {
+        $('saved').textContent = 'Non enregistré';
+      }
+      setTimeout(function () { $('saved').textContent = ''; }, 1500);
+    }, 500);
+  }
   function renderMe() {
     var box = $('me');
     box.innerHTML = '';
     ME.forEach(function (f) {
       box.appendChild(makeRow({
-        label: f.label,
-        value: profil[f.k] || '',
-        placeholder: 'À remplir',
-        onInput: function (v) { profil[f.k] = v; saveProfil(); }
+        k: f.k, label: f.label, type: f.type, auto: f.auto, mode: f.mode,
+        value: profil[f.k] || '', placeholder: 'À remplir',
+        onInput: function (v) { profil[f.k] = v; enregistrerProfil(); }
       }));
     });
   }
-  var saveTimer = null;
-  function saveProfil() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try {
-        store.set('factureu:profil', JSON.stringify(profil)).then(function () {
-          $('saved').textContent = 'Enregistré';
-          setTimeout(function () { $('saved').textContent = ''; }, 1500);
-        }, function () {});
-      } catch (e) {}
-    }, 500);
-  }
-  (async function () {
-    try {
-      var r = await store.get('factureu:profil');
-      if (r && r.value) profil = JSON.parse(r.value);
-    } catch (e) { profil = {}; }
-    renderMe();
-  })();
 
+  // --- Ticket references ---
   /* "10102026" typed on the iPhone numeric keypad (no "/" key) becomes "10/10/2026". */
   function formaterSaisieDate(v) {
     if (!/^[\d\/]*$/.test(v)) return v;
@@ -270,26 +262,33 @@
     return c.slice(0, 2) + (c.length > 2 ? '/' + c.slice(2, 4) : '') + (c.length > 4 ? '/' + c.slice(4) : '');
   }
 
-  var ticketVals = {};
-  function show(vals) {
+  function show(vals, doutes) {
     var rows = $('rows');
     rows.innerHTML = '';
     ticketVals = {};
+    doutes = doutes || [];
     TICKET.forEach(function (f) {
       ticketVals[f.k] = vals[f.k] || '';
-      rows.appendChild(makeRow({
-        n: f.n, label: f.label, value: vals[f.k] || '', placeholder: f.ph || 'À compléter',
-        mode: f.mode,
-        onInput: function (v, input) {
+      var row = makeRow({
+        k: f.k, n: f.n, label: f.label, value: vals[f.k] || '', placeholder: f.ph, mode: f.mode, copiable: true,
+        onInput: function (v, input, row) {
           if (f.k === 'date') v = input.value = formaterSaisieDate(v);
           ticketVals[f.k] = v;
+          marquer(row, null);   // the user typed it: no longer the reader's guess
         }
-      }));
+      });
+      rows.appendChild(row);
+      if (vals.__lu) marquer(row, !vals[f.k] ? 'absent' : (doutes.indexOf(f.k) !== -1 ? 'douteux' : null));
     });
-    $('ticketCard').style.display = '';
   }
 
-  // Le bookmarklet lit ce JSON dans le presse-papier pour remplir le formulaire Super U.
+  function statut(texte, niveau) {
+    var s = $('statut');
+    s.textContent = texte || '';
+    s.className = 'statut' + (niveau ? ' ' + niveau : '');
+  }
+
+  // The bookmarklet reads this JSON from the clipboard to fill the Super U form.
   function buildPayload() {
     return JSON.stringify({
       v: 1,
@@ -298,50 +297,36 @@
       date: normaliserDate(ticketVals.date) || ticketVals.date || '',
       montant: (ticketVals.montant || '').replace('.', ','),
       caisse: ticketVals.caisse || '',
-      nom: profil.nom || '',
-      prenom: profil.prenom || '',
-      voie: profil.voie || '',
-      complement: profil.complement || '',
-      cp: profil.cp || '',
-      ville: profil.ville || '',
-      tel: profil.tel || '',
-      email: profil.email || ''
+      nom: profil.nom || '', prenom: profil.prenom || '', voie: profil.voie || '',
+      complement: profil.complement || '', cp: profil.cp || '', ville: profil.ville || '',
+      tel: profil.tel || '', email: profil.email || ''
     });
   }
 
   $('fillAll').addEventListener('click', function () {
-    var manquants = TICKET.filter(function (f) { return !(ticketVals[f.k] || '').trim(); })
-      .map(function (f) { return f.label; });
+    var manquants = TICKET.filter(function (f) { return !(ticketVals[f.k] || '').trim(); }).map(function (f) { return f.label; });
     var btn = $('fillAll');
-    var ok = function () {
-      btn.textContent = manquants.length
-        ? 'Copié — incomplet : ' + manquants.join(', ')
+    copier(buildPayload()).then(function (ok) {
+      btn.textContent = !ok ? 'Copie impossible — réessaie'
+        : manquants.length ? 'Copié — incomplet : ' + manquants.join(', ')
         : 'Copié — va sur le formulaire';
-      btn.classList.add('done');
-      setTimeout(function () { btn.textContent = 'Copier pour le formulaire'; btn.classList.remove('done'); }, 2600);
-    };
-    var text = buildPayload();
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(ok, function () { fallback(text, ok); });
-    } else { fallback(text, ok); }
+      btn.classList.toggle('done', ok);
+      setTimeout(function () { btn.textContent = 'Copier pour le formulaire'; btn.classList.remove('done'); }, 3000);
+    });
   });
 
   $('pasteBtn').addEventListener('click', function () {
-    var btn = $('pasteBtn');
     var traiter = function (texte) {
-      if (!texte || !texte.trim()) {
-        btn.textContent = 'Rien à coller'; setTimeout(reset, 2000); return;
-      }
-      var vals = extraireTicket(texte);
-      show(vals);
-      var trouves = ['magasin','ticket','date','montant','caisse'].filter(function (k) { return vals[k]; });
-      btn.textContent = trouves.length === 5
-        ? '5 valeurs trouvées — vérifie-les'
-        : trouves.length + '/5 trouvées — complète le reste';
-      btn.classList.add('done');
-      setTimeout(reset, 3200);
+      if (!texte || !texte.trim()) { statut('Le presse-papier est vide.', 'erreur'); return; }
+      var lu = extraireTicket(texte);
+      lu.__lu = true;
+      show(lu, lu.doutes);
+      var absents = TICKET.filter(function (f) { return !lu[f.k]; }).length;
+      var douteux = lu.doutes.filter(function (k) { return lu[k]; }).length;
+      if (absents) statut(absents > 1 ? absents + ' valeurs introuvables (en rouge) : tape-les en lisant le ticket.' : '1 valeur introuvable (en rouge) : tape-la en lisant le ticket.', 'erreur');
+      else if (douteux) statut('Valeurs en orange : vérifie-les sur le ticket.', 'attention');
+      else statut('5 valeurs trouvées.', 'ok');
     };
-    var reset = function () { btn.textContent = 'Coller le texte du ticket'; btn.classList.remove('done'); };
     if (navigator.clipboard && navigator.clipboard.readText) {
       navigator.clipboard.readText().then(traiter, function () { traiter(window.prompt('Colle ici le texte du ticket :') || ''); });
     } else {
@@ -349,7 +334,14 @@
     }
   });
 
-  $('again').addEventListener('click', function () { show({}); });
+  $('again').addEventListener('click', function () {
+    var rempli = TICKET.some(function (f) { return (ticketVals[f.k] || '').trim(); });
+    if (rempli && !window.confirm('Effacer les 5 valeurs du ticket ?')) return;
+    show({}); statut('');
+  });
+
+  profil = lireProfilEnregistre();
+  renderMe();
   show({});
 })();
 </script>

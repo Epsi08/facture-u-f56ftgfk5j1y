@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!-- MODELE : build.sh produit installer-bookmarklet.html a partir de ce fichier. Modifier ici, jamais la page generee. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Installer « Remplir facture U »</title>
+<style>
+  :root { --teal:#0b7285; --ink:#1a1a1a; --muted:#666; --line:#e4e4e7; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 18px 60px; background:#f6f7f8; color:var(--ink);
+         font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif; }
+  .wrap { max-width:640px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 6px; letter-spacing:-.02em; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:18px; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  ol { margin:0; padding-left:22px; }
+  li { margin-bottom:10px; }
+  code { background:#f0f1f3; padding:2px 6px; border-radius:5px; font-size:14px; }
+  .copybtn { width:100%; padding:15px; border:0; border-radius:10px; background:var(--teal);
+             color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+  .copybtn.done { background:#2b8a3e; }
+  textarea { width:100%; height:110px; margin-top:12px; font-family:ui-monospace,Menlo,monospace;
+             font-size:11px; border:1px solid var(--line); border-radius:8px; padding:10px;
+             background:#fafafa; color:#444; }
+  .note { background:#fff8e6; border:1px solid #ffe08a; border-radius:10px; padding:14px 16px;
+          font-size:14.5px; margin-bottom:18px; }
+  b.name { white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Installer « Remplir facture U »</h1>
+  <p class="sub">Un favori qui remplit le formulaire Super U d'un seul geste.</p>
+
+  <div class="card">
+    <h2>1. Copier le code</h2>
+    <button class="copybtn" id="copy">Copier le code du favori</button>
+    <textarea id="code" readonly></textarea>
+  </div>
+
+  <div class="card">
+    <h2>2. Créer le favori sur iPhone</h2>
+    <ol>
+      <li>Dans Safari, ouvre <b>n'importe quelle page</b>, touche <b>Partager</b> puis <b>Ajouter aux favoris</b>. Enregistre.</li>
+      <li>Touche l'icône <b>Signets</b> (le livre) → <b>Favoris</b> → <b>Modifier</b>.</li>
+      <li>Touche le favori que tu viens de créer.</li>
+      <li>Renomme-le <b class="name">Remplir facture U</b>.</li>
+      <li>Efface l'adresse et <b>colle le code copié à l'étape 1</b>. Valide.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>3. S'en servir</h2>
+    <ol>
+      <li>Touche le raccourci <b>Facture U</b> et photographie le ticket : il ouvre le formulaire tout seul.
+          <br><small>Sans le raccourci : dans l'app, colle ou tape les 5 valeurs, touche <b>Copier pour le formulaire</b>,
+          puis ouvre <code>magasins-u.com/ma-facture-u</code> dans Safari.</small></li>
+      <li>Touche la barre d'adresse, tape <b>Remplir</b> et choisis le favori.</li>
+      <li>Si Safari demande l'autorisation de coller, accepte.</li>
+      <li>Lis le bandeau : vert = tout est rempli, orange = valeurs à vérifier, rouge = cases à remplir à la main.</li>
+      <li>Vérifie, puis touche <b>Envoyer</b> toi-même. Le lien de la facture n'est valable que 5 minutes.</li>
+    </ol>
+  </div>
+
+  <div class="note">
+    <b>Le bookmarklet ne valide jamais le formulaire.</b> Il remplit seulement les cases :
+    tu gardes le dernier mot avant l'envoi. Vérifie surtout le montant et la date,
+    qui viennent d'une lecture de photo.
+  </div>
+</div>
+<script>
+var BM = __FAVORI__;
+document.getElementById('code').value = BM;
+document.getElementById('copy').addEventListener('click', function () {
+  var b = this;
+  function ok() {
+    b.textContent = 'Copié — passe à l\u2019étape 2';
+    b.classList.add('done');
+    setTimeout(function () { b.textContent = 'Copier le code du favori'; b.classList.remove('done'); }, 2500);
+  }
+  function sel() {
+    var t = document.getElementById('code');
+    t.focus(); t.select();
+    try { document.execCommand('copy'); ok(); } catch (e) {}
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(BM).then(ok, sel);
+  } else { sel(); }
+});
+</script>
+</body>
+</html>

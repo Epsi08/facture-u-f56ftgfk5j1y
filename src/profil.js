@@ -24,13 +24,17 @@ var CLES_PROFIL = {
   'email': 'email', 'e-mail': 'email', 'mail': 'email'
 };
 
-// "Nom: DUPONT" lines → { nom: 'DUPONT' }. Accents and case in the labels are ignored.
+// Labels the profile block may use. Also used to cut a profile that lost its line breaks
+// (clipboard pasted through a prompt arrives as one line).
+var RE_LIBELLES = /\s+(?=(?:nom|pr[e\u00e9]nom|adresse|voie|compl[e\u00e9]ment|code postal|cp|ville|t[e\u00e9]l[e\u00e9]phone|t[e\u00e9]l\.?|e-?mail|mail)\s*:)/gi;
+
+// "Nom: DUPONT" lines → { nom: 'DUPONT' }. Accents, case and a trailing dot in labels are ignored.
 function lireProfil(texte) {
   var profil = {};
-  String(texte || '').split(/\r?\n/).forEach(function (ligne) {
+  String(texte || '').replace(/\r\n?/g, '\n').replace(RE_LIBELLES, '\n').split('\n').forEach(function (ligne) {
     var i = ligne.indexOf(':');
     if (i === -1) return;
-    var cle = ligne.slice(0, i).trim().toLowerCase().normalize('NFD').replace(DIACRITIQUES, '');
+    var cle = ligne.slice(0, i).trim().toLowerCase().normalize('NFD').replace(DIACRITIQUES, '').replace(/\.$/, '');
     if (CLES_PROFIL[cle]) profil[CLES_PROFIL[cle]] = ligne.slice(i + 1).trim();
   });
   return profil;

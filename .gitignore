@@ -1,2 +1,3 @@
 *.shortcut
 .DS_Store
+__pycache__/

@@ -15,7 +15,7 @@
       }
     } catch (e) { /* refusé ou non supporté : on demande à la main */ }
     if (!raw || (raw.indexOf('{') === -1 && raw.indexOf(MARQUEUR_RACCOURCI) === -1)) {
-      raw = window.prompt('Colle ici les données du ticket (bouton « Copier pour le formulaire » dans l\'app) :') || '';
+      raw = window.prompt('Colle ici le texte copié par le raccourci « Facture U » (ou par le bouton « Copier pour le formulaire » de l\'app) :') || '';
     }
     var duRaccourci = lireTexteRaccourci(raw);
     if (duRaccourci) return duRaccourci;
@@ -26,12 +26,12 @@
 
   /* --- Exécution --- */
   if (!estPageFactureU()) {
-    toast('Ouvre d\'abord la page « Ma facture U » de magasins-u.com', false);
+    toast('Ouvre d\'abord la page « Ma facture U » de magasins-u.com', 'erreur');
     return;
   }
 
   var data = await getPayload();
-  if (!data) { toast('Données illisibles. Recopie-les depuis l\'app.', false); return; }
+  if (!data) { toast('Rien de lisible dans le presse-papier.\nRelance le raccourci « Facture U », ou « Copier pour le formulaire » dans l\'app.', 'erreur'); return; }
 
   await remplirFormulaireU(data);
 })();
